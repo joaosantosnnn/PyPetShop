@@ -7,43 +7,44 @@ import {
 } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
-  const { currentView, setCurrentView, company } = usePetGestor();
+  const { currentView, setCurrentView, company, currentProfile } = usePetGestor();
   const [isOpen, setIsOpen] = useState(false);
 
-  const mainTabs: { id: AppView; label: string; icon: React.ElementType }[] = [
+  type MobileItem = { id: AppView; label: string; icon: React.ElementType; roles?: string[] };
+  const mainTabs: MobileItem[] = [
     { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
     { id: 'appointments', label: 'Agenda', icon: Calendar },
     { id: 'operation', label: 'Banho', icon: Scissors },
-    { id: 'pos', label: 'PDV', icon: ShoppingCart },
+    { id: 'pos', label: 'PDV', icon: ShoppingCart, roles: ['proprietario', 'administrador', 'gerente', 'caixa'] },
   ];
 
-  const allDrawerItems: { id: AppView; label: string; icon: React.ElementType }[] = [
+  const allDrawerItems: MobileItem[] = [
     { id: 'dashboard', label: 'Dashboard Principal', icon: LayoutDashboard },
     { id: 'appointments', label: 'Agenda de Banho & Tosa', icon: Calendar },
     { id: 'operation', label: 'Painel Operacional (Kanban)', icon: Scissors },
     { id: 'comandas', label: 'Gestão de Comandas', icon: ClipboardList },
-    { id: 'pos', label: 'Frente de Caixa (PDV)', icon: ShoppingCart },
+    { id: 'pos', label: 'Frente de Caixa (PDV)', icon: ShoppingCart, roles: ['proprietario', 'administrador', 'gerente', 'caixa'] },
     { id: 'customers', label: 'Clientes (Tutores)', icon: Users },
     { id: 'pets', label: 'Pets (Animais)', icon: Dog },
-    { id: 'services', label: 'Serviços', icon: Sparkles },
-    { id: 'products', label: 'Produtos & Preços', icon: Package },
-    { id: 'stock', label: 'Estoque & Movimentações', icon: Package },
-    { id: 'suppliers', label: 'Fornecedores & Pedidos', icon: Truck },
-    { id: 'financial', label: 'Financeiro & Caixa', icon: DollarSign },
-    { id: 'employees', label: 'Equipe & Comissões', icon: UserCheck },
+    { id: 'services', label: 'Serviços', icon: Sparkles, roles: ['proprietario', 'administrador', 'gerente'] },
+    { id: 'products', label: 'Produtos & Preços', icon: Package, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
+    { id: 'stock', label: 'Estoque & Movimentações', icon: Package, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
+    { id: 'suppliers', label: 'Fornecedores & Pedidos', icon: Truck, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
+    { id: 'financial', label: 'Financeiro & Caixa', icon: DollarSign, roles: ['proprietario', 'administrador', 'gerente', 'caixa'] },
+    { id: 'employees', label: 'Equipe & Comissões', icon: UserCheck, roles: ['proprietario', 'administrador'] },
     { id: 'delivery', label: 'Busca & Entrega (Táxi)', icon: Truck },
     { id: 'loyalty', label: 'Fidelidade & Pacotes', icon: HeartHandshake },
     { id: 'consent', label: 'Termos & Incidentes', icon: FileText },
-    { id: 'reports', label: 'Relatórios Operacionais', icon: BarChart3 },
-    { id: 'audit', label: 'Logs de Auditoria', icon: ShieldAlert },
-    { id: 'settings', label: 'Configurações', icon: Settings },
+    { id: 'reports', label: 'Relatórios Operacionais', icon: BarChart3, roles: ['proprietario', 'administrador', 'gerente'] },
+    { id: 'audit', label: 'Logs de Auditoria', icon: ShieldAlert, roles: ['proprietario', 'administrador'] },
+    { id: 'settings', label: 'Configurações', icon: Settings, roles: ['proprietario', 'administrador'] },
   ];
 
   return (
     <>
       {/* Bottom Bar Navigation for Mobile */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-around z-40 px-2 shadow-lg">
-        {mainTabs.map(tab => {
+        {mainTabs.filter(item => !item.roles || item.roles.includes(currentProfile.role)).map(tab => {
           const Icon = tab.icon;
           const isActive = currentView === tab.id;
           return (
@@ -86,7 +87,7 @@ export const MobileNav: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 space-y-1">
-              {allDrawerItems.map(item => {
+              {allDrawerItems.filter(item => !item.roles || item.roles.includes(currentProfile.role)).map(item => {
                 const Icon = item.icon;
                 const isActive = currentView === item.id;
                 return (
