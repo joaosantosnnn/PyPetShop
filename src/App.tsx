@@ -32,6 +32,7 @@ import { PurchasesView } from './components/purchases/PurchasesView';
 import { DataManagementView } from './components/settings/DataManagementView';
 import { CustomerPortal } from './components/portal/CustomerPortal';
 import { PortalPixWidget } from './components/portal/PortalPixWidget';
+import { PortalReceiptsWidget } from './components/portal/PortalReceiptsWidget';
 
 const MainLayout: React.FC = () => {
   const { currentView } = usePetGestor();
@@ -105,7 +106,7 @@ const MainLayout: React.FC = () => {
 };
 
 export default function App() {
-  if (window.location.pathname.startsWith('/portal')) return <><CustomerPortal /><PortalPixWidget /></>;
+  if (window.location.pathname.startsWith('/portal')) return <><CustomerPortal /><PortalPixWidget /><PortalReceiptsWidget /></>;
   return (
     <AppProvider>
       <AuthGate>
