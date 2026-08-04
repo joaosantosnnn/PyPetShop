@@ -491,31 +491,11 @@ export const initialFinancialTransactions: FinancialTransaction[] = [
   }
 ];
 
-export const initialLiabilityTerms: LiabilityTerm[] = [
-  {
-    id: 'term-1',
-    title: 'Termo de Autorização para Remoção de Nós Severos',
-    type: 'banho_tosa',
-    content: 'Pelo presente termo, autorizo o PetShop PetGestor a realizar a tricotomia/desembolo do pet em virtude de nós severos encostados na pele...',
-    is_active: true,
-  }
-];
+export const initialLiabilityTerms: LiabilityTerm[] = [];
 
 export const initialConsentTerms = initialLiabilityTerms;
 
-export const initialPetIncidents: PetIncident[] = [
-  {
-    id: 'inc-1',
-    pet_id: 'pet-1',
-    pet_name: 'Thor',
-    customer_id: 'cust-1',
-    type: 'no_severo',
-    description: 'Nó denso na região atrás da orelha direita antes do banho.',
-    actions_taken: 'Removido com tesoura de ponta cega e avisado a tutora por WhatsApp.',
-    notified_tutor: true,
-    logged_at: new Date(Date.now() - 3600000 * 24 * 7).toISOString(),
-  }
-];
+export const initialPetIncidents: PetIncident[] = [];
 
 export const initialCashRegister: CashRegister = {
   id: 'cash-1',
