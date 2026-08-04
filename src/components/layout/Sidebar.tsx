@@ -34,6 +34,7 @@ export const Sidebar: React.FC = () => {
     { id: 'products', label: 'Produtos', icon: Package, badge: lowStockCount, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
     { id: 'stock', label: 'Estoque & Lotes', icon: Package, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
     { id: 'suppliers', label: 'Fornecedores', icon: Truck, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
+    { id: 'purchases', label: 'Pedidos de Compra', icon: Package, roles: ['proprietario','administrador','gerente','estoquista'] },
     { id: 'financial', label: 'Financeiro & Caixa', icon: DollarSign, roles: ['proprietario', 'administrador', 'gerente', 'caixa'] },
     { id: 'employees', label: 'Funcionários & Comissões', icon: UserCheck, roles: ['proprietario', 'administrador'] },
     { id: 'delivery', label: 'Busca & Entrega (Táxi)', icon: Truck, roles: ['proprietario', 'administrador', 'gerente', 'atendente'] },
