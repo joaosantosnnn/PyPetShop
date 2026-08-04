@@ -45,6 +45,7 @@ export type AppView =
   | 'delivery'
   | 'loyalty'
   | 'consent'
+  | 'communications'
   | 'reports'
   | 'audit'
   | 'availability'
