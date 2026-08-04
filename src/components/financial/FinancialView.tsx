@@ -8,7 +8,7 @@ import {
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 export const FinancialView: React.FC = () => {
-  const { financialTransactions, addFinancialTransaction } = usePetGestor();
+  const { financialTransactions, addFinancialTransaction, cashRegister, openCashRegister, closeCashRegister, registerCashMovement } = usePetGestor();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [description, setDescription] = useState('');
@@ -60,12 +60,19 @@ export const FinancialView: React.FC = () => {
           </p>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+        {cashRegister.status === 'fechado' ? <button onClick={async()=>{const value=Number(window.prompt('Valor inicial em dinheiro:','0'));if(Number.isFinite(value)&&value>=0)await openCashRegister(value);}} className="px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 text-xs font-bold">Abrir Caixa</button> : <>
+          <button onClick={async()=>{const value=Number(window.prompt('Valor da sangria:','0'));const reason=window.prompt('Motivo da sangria:','Retirada do caixa');if(value>0&&reason)await registerCashMovement('sangria',value,reason);}} className="px-3 py-2 rounded-xl border text-xs font-bold">Sangria</button>
+          <button onClick={async()=>{const value=Number(window.prompt('Valor do suprimento:','0'));const reason=window.prompt('Motivo do suprimento:','Reforço de caixa');if(value>0&&reason)await registerCashMovement('suprimento',value,reason);}} className="px-3 py-2 rounded-xl border text-xs font-bold">Suprimento</button>
+          <button onClick={async()=>{const value=Number(window.prompt('Dinheiro contado no caixa:','0'));if(Number.isFinite(value)&&value>=0)await closeCashRegister(value);}} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">Fechar Caixa</button>
+        </>}
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md transition"
         >
           <Plus className="w-4 h-4" /> Nova Lançamento Financeiro
         </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
