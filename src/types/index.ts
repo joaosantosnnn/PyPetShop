@@ -404,16 +404,23 @@ export interface DeliveryRequest {
 
 export interface LoyaltyPackage {
   id: string;
+  company_id: string;
+  service_package_id: string;
   customer_id: string;
-  customer_name: string;
+  customer_name?: string;
   pet_id: string;
-  pet_name: string;
+  pet_name?: string;
+  service_id: string;
+  service_name?: string;
   package_name: string;
-  total_baths: number;
-  used_baths: number;
+  total_uses: number;
+  used_uses: number;
   price_paid: number;
-  expiration_date: string;
-  status: 'ativo' | 'expirado' | 'concluido';
+  starts_at: string;
+  expires_at: string;
+  status: 'ativo' | 'expirado' | 'concluido' | 'cancelado';
+  created_by: string;
+  created_at?: string;
 }
 
 export interface StampCard {
