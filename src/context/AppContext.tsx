@@ -3,7 +3,7 @@ import {
   Company, UserProfile, Customer, Pet, Service, 
   Appointment, ServiceOrder, Product, StockMovement, 
   Sale, FinancialTransaction, Supplier, CashRegister, 
-  DeliveryRequest, ConsentTerm, LoyaltyPackage, AppointmentStatus, ServiceOrderStatus 
+  DeliveryRequest, ConsentTerm, LoyaltyPackage, AppointmentStatus, ServiceOrderStatus, TermAcceptance, PetCheckin, PetIncident
 } from '../types';
 import { 
   initialCompany, initialProfiles,
@@ -26,6 +26,7 @@ import {
 import { closeCash, loadOpenCash, moveCash, openCash } from '../services/cashRepository';
 import { insertDeliveryRequest, loadDeliveryRequests, saveDeliveryRequest } from '../services/deliveryRepository';
 import { loadLoyaltyPackages, sellLoyaltyPackage } from '../services/loyaltyRepository';
+import { acceptTerm, createCheckin, createIncident, createTerm, loadCareData } from '../services/careRepository';
 
 export type AppView = 
   | 'dashboard'
@@ -84,6 +85,9 @@ interface AppContextType {
   deliveryRequests: DeliveryRequest[];
   loyaltyPackages: LoyaltyPackage[];
   consentTerms: ConsentTerm[];
+  termAcceptances: TermAcceptance[];
+  petCheckins: PetCheckin[];
+  petIncidents: PetIncident[];
   
   // Actions - Customers
   addCustomer: (customer: Omit<Customer, 'id' | 'company_id' | 'total_spent' | 'outstanding_balance'>) => Customer;
@@ -133,6 +137,10 @@ interface AppContextType {
   addDeliveryRequest: (req: Omit<DeliveryRequest, 'id' | 'company_id'>) => void;
   updateDeliveryStatus: (id: string, status: DeliveryRequest['status']) => void;
   sellPackage: (input: { customerId:string;petId:string;serviceId:string;name:string;totalUses:number;validityDays:number;price:number;paymentMethod:string }) => Promise<void>;
+  addTerm: (input: Omit<ConsentTerm,'id'|'company_id'|'created_by'|'created_at'>) => Promise<void>;
+  registerTermAcceptance: (input:{termId:string;customerId:string;petId?:string;appointmentId?:string;acceptedByName:string}) => Promise<void>;
+  registerPetCheckin: (input:Omit<PetCheckin,'id'|'company_id'|'created_by'|'created_at'|'updated_at'>) => Promise<void>;
+  registerPetIncident: (input:Omit<PetIncident,'id'|'company_id'|'created_by'|'created_at'>) => Promise<void>;
   
   // Toasts
   toasts: Toast[];
@@ -192,7 +200,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>(initialDeliveryRequests);
   const [loyaltyPackages, setLoyaltyPackages] = useState<LoyaltyPackage[]>([]);
 
-  const [consentTerms] = useState<ConsentTerm[]>(initialConsentTerms);
+  const [consentTerms, setConsentTerms] = useState<ConsentTerm[]>(initialConsentTerms);
+  const [termAcceptances,setTermAcceptances] = useState<TermAcceptance[]>([]);
+  const [petCheckins,setPetCheckins] = useState<PetCheckin[]>([]);
+  const [petIncidents,setPetIncidents] = useState<PetIncident[]>([]);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -216,7 +227,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadOpenCash(currentProfile.company_id),
       loadDeliveryRequests(currentProfile.company_id),
       loadLoyaltyPackages(currentProfile.company_id),
-    ]).then(([data, commercial, orders, openRegister, deliveries, packages]) => {
+      loadCareData(currentProfile.company_id),
+    ]).then(([data, commercial, orders, openRegister, deliveries, packages, care]) => {
         if (!active) return;
         setCompany(data.company);
         setCustomers(data.customers);
@@ -238,6 +250,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           driver_name: data.profiles.find(profile => profile.id === item.driver_id)?.full_name,
         })));
         setLoyaltyPackages(packages.map(item => ({ ...item, customer_name:data.customers.find(c=>c.id===item.customer_id)?.name,pet_name:data.pets.find(p=>p.id===item.pet_id)?.name,service_name:data.services.find(s=>s.id===item.service_id)?.name })));
+        setConsentTerms(care.terms); setTermAcceptances(care.acceptances); setPetCheckins(care.checkins); setPetIncidents(care.incidents);
       })
       .catch(() => {
         if (active) addToast('Não foi possível carregar os dados do PetShop.', 'error');
@@ -827,6 +840,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const refreshCare = async () => { const care=await loadCareData(company.id);setConsentTerms(care.terms);setTermAcceptances(care.acceptances);setPetCheckins(care.checkins);setPetIncidents(care.incidents); };
+  const addTerm = async (input:Omit<ConsentTerm,'id'|'company_id'|'created_by'|'created_at'>) => { await createTerm(input);await refreshCare();addToast('Termo criado com sucesso!','success'); };
+  const registerTermAcceptance = async (input:{termId:string;customerId:string;petId?:string;appointmentId?:string;acceptedByName:string}) => { await acceptTerm(input);await refreshCare();addToast('Aceite registrado com validade jurídica e histórico.','success'); };
+  const registerPetCheckin = async (input:Omit<PetCheckin,'id'|'company_id'|'created_by'|'created_at'|'updated_at'>) => { await createCheckin(input);await refreshCare();addToast('Check-in do pet registrado!','success'); };
+  const registerPetIncident = async (input:Omit<PetIncident,'id'|'company_id'|'created_by'|'created_at'>) => { await createIncident(input);await refreshCare();addToast('Incidente registrado no histórico do pet.','success'); };
+
   return (
     <AppContext.Provider value={{
       currentView, setCurrentView,
@@ -835,7 +854,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       company, updateCompany,
       customers, pets, services, appointments, serviceOrders,
       products, stockMovements, sales, financialTransactions, cashRegister,
-      suppliers, deliveryRequests, loyaltyPackages, consentTerms,
+      suppliers, deliveryRequests, loyaltyPackages, consentTerms, termAcceptances, petCheckins, petIncidents,
       addCustomer, updateCustomer, toggleCustomerActive,
       addPet, updatePet,
       addService, updateService,
@@ -844,7 +863,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addProduct, updateProduct, addStockMovement, adjustStock,
       completeSale, recordSale, cancelSale,
       addFinancialTransaction, updateTransactionStatus, updateCashRegister, openCashRegister, closeCashRegister, registerCashMovement,
-      addSupplier, addDeliveryRequest, updateDeliveryStatus, sellPackage,
+      addSupplier, addDeliveryRequest, updateDeliveryStatus, sellPackage, addTerm, registerTermAcceptance, registerPetCheckin, registerPetIncident,
       toasts, addToast, removeToast, logAudit
     }}>
       {children}
