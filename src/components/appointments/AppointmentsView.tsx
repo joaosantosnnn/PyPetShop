@@ -3,6 +3,7 @@ import { usePetGestor } from '../../context/AppContext';
 import { Appointment, Pet } from '../../types';
 import { formatBRL, formatDate, formatTime } from '../../utils/formatters';
 import { AppointmentFormModal } from './AppointmentFormModal';
+import { PortalRequestsPanel } from './PortalRequestsPanel';
 import { generateWhatsAppLink, buildAppointmentReminderMessage, buildPetReadyMessage } from '../../utils/whatsapp';
 import { 
   Calendar as CalendarIcon, Plus, Filter, Scissors, 
@@ -78,6 +79,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+      <PortalRequestsPanel />
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
