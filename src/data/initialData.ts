@@ -508,6 +508,7 @@ export const initialCashRegister: CashRegister = {
   total_sales_cash: 0,
   total_sales_pix: 380.00,
   total_sales_card: 0,
+  total_sales_credit: 0,
   total_supplements: 0,
   total_withdrawals: 0,
 };
