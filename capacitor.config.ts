@@ -1,14 +1,4 @@
-export interface CapacitorConfig {
-  appId?: string;
-  appName?: string;
-  webDir?: string;
-  server?: {
-    androidScheme?: string;
-    url?: string;
-    cleartext?: boolean;
-  };
-  plugins?: Record<string, any>;
-}
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.petgestor.app',
