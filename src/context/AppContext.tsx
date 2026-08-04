@@ -40,6 +40,7 @@ export type AppView =
   | 'products'
   | 'stock'
   | 'suppliers'
+  | 'purchases'
   | 'financial'
   | 'employees'
   | 'delivery'
