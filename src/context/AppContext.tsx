@@ -3,7 +3,7 @@ import {
   Company, UserProfile, Customer, Pet, Service, 
   Appointment, ServiceOrder, Product, StockMovement, 
   Sale, FinancialTransaction, Supplier, CashRegister, 
-  DeliveryRequest, ConsentTerm, AppointmentStatus, ServiceOrderStatus 
+  DeliveryRequest, ConsentTerm, LoyaltyPackage, AppointmentStatus, ServiceOrderStatus 
 } from '../types';
 import { 
   initialCompany, initialProfiles,
@@ -25,6 +25,7 @@ import {
 } from '../services/serviceOrderRepository';
 import { closeCash, loadOpenCash, moveCash, openCash } from '../services/cashRepository';
 import { insertDeliveryRequest, loadDeliveryRequests, saveDeliveryRequest } from '../services/deliveryRepository';
+import { loadLoyaltyPackages, sellLoyaltyPackage } from '../services/loyaltyRepository';
 
 export type AppView = 
   | 'dashboard'
@@ -81,6 +82,7 @@ interface AppContextType {
   cashRegister: CashRegister;
   suppliers: Supplier[];
   deliveryRequests: DeliveryRequest[];
+  loyaltyPackages: LoyaltyPackage[];
   consentTerms: ConsentTerm[];
   
   // Actions - Customers
@@ -130,6 +132,7 @@ interface AppContextType {
   addSupplier: (supplier: Omit<Supplier, 'id' | 'company_id'>) => void;
   addDeliveryRequest: (req: Omit<DeliveryRequest, 'id' | 'company_id'>) => void;
   updateDeliveryStatus: (id: string, status: DeliveryRequest['status']) => void;
+  sellPackage: (input: { customerId:string;petId:string;serviceId:string;name:string;totalUses:number;validityDays:number;price:number;paymentMethod:string }) => Promise<void>;
   
   // Toasts
   toasts: Toast[];
@@ -187,6 +190,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>(initialDeliveryRequests);
+  const [loyaltyPackages, setLoyaltyPackages] = useState<LoyaltyPackage[]>([]);
 
   const [consentTerms] = useState<ConsentTerm[]>(initialConsentTerms);
 
@@ -211,7 +215,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadServiceOrders(currentProfile.company_id),
       loadOpenCash(currentProfile.company_id),
       loadDeliveryRequests(currentProfile.company_id),
-    ]).then(([data, commercial, orders, openRegister, deliveries]) => {
+      loadLoyaltyPackages(currentProfile.company_id),
+    ]).then(([data, commercial, orders, openRegister, deliveries, packages]) => {
         if (!active) return;
         setCompany(data.company);
         setCustomers(data.customers);
@@ -232,6 +237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           pet_name: data.pets.find(pet => pet.id === item.pet_id)?.name,
           driver_name: data.profiles.find(profile => profile.id === item.driver_id)?.full_name,
         })));
+        setLoyaltyPackages(packages.map(item => ({ ...item, customer_name:data.customers.find(c=>c.id===item.customer_id)?.name,pet_name:data.pets.find(p=>p.id===item.pet_id)?.name,service_name:data.services.find(s=>s.id===item.service_id)?.name })));
       })
       .catch(() => {
         if (active) addToast('Não foi possível carregar os dados do PetShop.', 'error');
@@ -431,7 +437,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return a;
     }));
-    saveAppointment(nextAppointment).catch(() => {
+    saveAppointment(nextAppointment).then(async () => {
+      if (status === 'entregue') {
+        const packages = await loadLoyaltyPackages(company.id);
+        setLoyaltyPackages(packages.map(item => ({ ...item, customer_name:customers.find(c=>c.id===item.customer_id)?.name,pet_name:pets.find(p=>p.id===item.pet_id)?.name,service_name:services.find(s=>s.id===item.service_id)?.name })));
+      }
+    }).catch(() => {
       setAppointments(prev => prev.map(item => item.id === previous.id ? previous : item));
       addToast('Não foi possível alterar o status do agendamento.', 'error');
     });
@@ -803,6 +814,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast(`Status do transporte atualizado para "${status.toUpperCase()}"`, 'info');
   };
 
+  const sellPackage = async (input: { customerId:string;petId:string;serviceId:string;name:string;totalUses:number;validityDays:number;price:number;paymentMethod:string }) => {
+    try {
+      await sellLoyaltyPackage(input);
+      const [packages, orders] = await Promise.all([loadLoyaltyPackages(company.id), loadServiceOrders(company.id)]);
+      setLoyaltyPackages(packages.map(item => ({ ...item, customer_name:customers.find(c=>c.id===item.customer_id)?.name,pet_name:pets.find(p=>p.id===item.pet_id)?.name,service_name:services.find(s=>s.id===item.service_id)?.name })));
+      setFinancialTransactions(orders.financialTransactions);
+      addToast('Pacote vendido e registrado no financeiro!', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Não foi possível vender o pacote.', 'error');
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       currentView, setCurrentView,
@@ -811,7 +835,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       company, updateCompany,
       customers, pets, services, appointments, serviceOrders,
       products, stockMovements, sales, financialTransactions, cashRegister,
-      suppliers, deliveryRequests, consentTerms,
+      suppliers, deliveryRequests, loyaltyPackages, consentTerms,
       addCustomer, updateCustomer, toggleCustomerActive,
       addPet, updatePet,
       addService, updateService,
@@ -820,7 +844,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addProduct, updateProduct, addStockMovement, adjustStock,
       completeSale, recordSale, cancelSale,
       addFinancialTransaction, updateTransactionStatus, updateCashRegister, openCashRegister, closeCashRegister, registerCashMovement,
-      addSupplier, addDeliveryRequest, updateDeliveryStatus,
+      addSupplier, addDeliveryRequest, updateDeliveryStatus, sellPackage,
       toasts, addToast, removeToast, logAudit
     }}>
       {children}
