@@ -1,145 +1,23 @@
-import React, { useState } from 'react';
-import { usePetGestor } from '../../context/AppContext';
-import { PetIncident, LiabilityTerm } from '../../types';
-import { formatDate } from '../../utils/formatters';
-import { FileText, AlertTriangle, ShieldCheck, Plus, CheckCircle, Dog, User } from 'lucide-react';
+import React,{useState} from 'react';
+import {FileText,ClipboardCheck,AlertTriangle,Plus} from 'lucide-react';
+import {usePetGestor} from '../../context/AppContext';
+import {formatDate} from '../../utils/formatters';
 
-export const TermsView: React.FC = () => {
-  const { pets, customers, petIncidents, addIncident } = usePetGestor();
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id || '');
-  const [incidentType, setIncidentType] = useState<any>('no_severo');
-  const [description, setDescription] = useState('');
-  const [actionsTaken, setActionsTaken] = useState('');
-
-  const handleAddIncident = (e: React.FormEvent) => {
-    e.preventDefault();
-    const selectedPet = pets.find(p => p.id === selectedPetId);
-
-    addIncident({
-      pet_id: selectedPetId,
-      pet_name: selectedPet?.name || '',
-      customer_id: selectedPet?.customer_id || '',
-      type: incidentType,
-      description,
-      actions_taken: actionsTaken,
-      notified_tutor: true,
-      logged_at: new Date().toISOString(),
-    });
-    setIsModalOpen(false);
-  };
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FileText className="w-6 h-6 text-teal-600" />
-            Termos de Responsabilidade & Registro de Incidentes
-          </h2>
-          <p className="text-xs text-slate-500">
-            Documentação legal para nós severos, lesões pré-existentes e reações alérgicas
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md transition"
-        >
-          <Plus className="w-4 h-4" /> Registrar Incidente / Ocorrência
-        </button>
-      </div>
-
-      {/* Standard Terms List */}
-      <div className="p-5 rounded-2xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900 space-y-3 text-xs">
-        <h3 className="font-bold text-teal-900 dark:text-teal-200 text-sm flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-teal-600" />
-          Modelo Padrão de Autorização para Remoção de Nós Severos
-        </h3>
-        <p className="text-teal-800 dark:text-teal-300 leading-relaxed">
-          "Pelo presente termo, autorizo o PetGestor a realizar o procedimento de desembolo / tricotomia para remoção de pelagem emaranhada.
-          Reconheço que a pelagem com nós severos impede a ventilação cutânea e pode encobrir lesões, dermatites ou otites pré-existentes."
-        </p>
-      </div>
-
-      {/* Incidents Log Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 font-bold text-sm">
-          Ocorrências e Incidentes Gravados
-        </div>
-
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-          {petIncidents.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 italic">Nenhum incidente gravado.</div>
-          ) : (
-            petIncidents.map(inc => (
-              <div key={inc.id} className="p-4 flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">
-                      Pet: {inc.pet_name}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
-                      {inc.type.replace('_', ' ')}
-                    </span>
-                  </div>
-
-                  <p className="text-slate-600 dark:text-slate-300"><span className="font-semibold">Descrição:</span> {inc.description}</p>
-                  {inc.actions_taken && <p className="text-slate-500"><span className="font-semibold">Ação tomada:</span> {inc.actions_taken}</p>}
-                </div>
-
-                <div className="text-right shrink-0">
-                  <span className="text-[11px] text-slate-400">{formatDate(inc.logged_at)}</span>
-                  <span className="block text-emerald-600 font-bold text-[10px] mt-1">[Tutor Notificado]</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <form onSubmit={handleAddIncident} className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md border space-y-4 text-xs">
-            <h3 className="font-bold text-base">Registrar Incidente</h3>
-
-            <div>
-              <label className="block font-semibold mb-1">Pet</label>
-              <select value={selectedPetId} onChange={e => setSelectedPetId(e.target.value)} className="w-full px-3 py-2 border rounded-xl">
-                {pets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.customer_name})</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1">Tipo de Ocorrência</label>
-              <select value={incidentType} onChange={e => setIncidentType(e.target.value)} className="w-full px-3 py-2 border rounded-xl">
-                <option value="no_severo">Nós Severos / Pelagem Emaranhada</option>
-                <option value="lesao_preexistente">Lesão Pré-existente na Pele / Ouvido</option>
-                <option value="comportamento_agressivo">Tentativa de Morder / Agressividade</option>
-                <option value="vermelhidao_pos_tosa">Vermelhidão / Sensibilidade Pós-Tosa</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1">Descrição Detalhada</label>
-              <textarea rows={2} required value={description} onChange={e => setDescription(e.target.value)} className="w-full px-3 py-2 border rounded-xl" />
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1">Ação Tomada</label>
-              <input type="text" value={actionsTaken} onChange={e => setActionsTaken(e.target.value)} placeholder="Ex: Avisado tutor por WhatsApp e aplicado pomada soothing" className="w-full px-3 py-2 border rounded-xl" />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-xl">Cancelar</button>
-              <button type="submit" className="px-5 py-2 bg-teal-600 text-white rounded-xl font-bold">Gravar Incidente</button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-};
+export const TermsView:React.FC=()=>{
+ const {consentTerms,termAcceptances,petCheckins,petIncidents,customers,pets,appointments,addTerm,registerTermAcceptance,registerPetCheckin,registerPetIncident}=usePetGestor();
+ const [tab,setTab]=useState<'terms'|'checkins'|'incidents'>('terms'); const [busy,setBusy]=useState(false);
+ const [customerId,setCustomerId]=useState(customers[0]?.id||''); const customerPets=pets.filter(p=>p.customer_id===customerId); const [petId,setPetId]=useState('');
+ const run=async(fn:()=>Promise<void>)=>{setBusy(true);try{await fn();}finally{setBusy(false)}};
+ const field='w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900';
+ return <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto text-xs">
+  <div><h2 className="text-xl font-bold flex items-center gap-2"><FileText className="w-6 h-6 text-teal-600"/>Termos, Check-in e Incidentes</h2><p className="text-slate-500">Proteção documental e histórico permanente de cada atendimento.</p></div>
+  <div className="flex gap-2">{([['terms','Termos'],['checkins','Check-in'],['incidents','Incidentes']] as const).map(([id,label])=><button key={id} onClick={()=>setTab(id)} className={`px-4 py-2 rounded-xl font-bold ${tab===id?'bg-teal-600 text-white':'bg-white dark:bg-slate-900 border'}`}>{label}</button>)}</div>
+  {tab==='terms'&&<div className="grid lg:grid-cols-2 gap-5">
+   <form className="bg-white dark:bg-slate-900 border rounded-2xl p-5 space-y-3" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);run(()=>addTerm({title:String(f.get('title')),term_type:String(f.get('type')),content:String(f.get('content')),version:Number(f.get('version')),is_required:true,is_active:true,valid_days:Number(f.get('days'))||undefined}))}}><h3 className="font-bold text-sm flex gap-2"><Plus className="w-4"/>Novo termo versionado</h3><input name="title" required placeholder="Título" className={field}/><div className="grid grid-cols-3 gap-2"><input name="type" required placeholder="Tipo" defaultValue="atendimento" className={field}/><input name="version" type="number" min="1" defaultValue="1" className={field}/><input name="days" type="number" min="1" placeholder="Validade (dias)" className={field}/></div><textarea name="content" required rows={6} placeholder="Conteúdo completo do termo" className={field}/><button disabled={busy} className="px-4 py-2 bg-teal-600 text-white rounded-xl font-bold">Criar termo</button></form>
+   <div className="space-y-3">{consentTerms.map(t=><div key={t.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-4"><div className="font-bold">{t.title} · v{t.version}</div><p className="text-slate-500 line-clamp-2 my-2">{t.content}</p><form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);run(()=>registerTermAcceptance({termId:t.id,customerId:String(f.get('customer')),petId:String(f.get('pet'))||undefined,appointmentId:String(f.get('appointment'))||undefined,acceptedByName:String(f.get('name'))}))}} className="grid sm:grid-cols-2 gap-2"><select name="customer" required className={field} onChange={e=>setCustomerId(e.target.value)} value={customerId}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><select name="pet" className={field} value={petId} onChange={e=>setPetId(e.target.value)}><option value="">Todos os pets</option>{customerPets.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><select name="appointment" className={field}><option value="">Sem agendamento</option>{appointments.filter(a=>a.customer_id===customerId).map(a=><option key={a.id} value={a.id}>{a.pet_name} · {formatDate(a.scheduled_at)}</option>)}</select><input name="name" required placeholder="Nome do tutor que aceitou" className={field}/><button disabled={busy} className="sm:col-span-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold">Registrar aceite</button></form></div>)}<div className="text-slate-500">{termAcceptances.length} aceite(s) preservado(s) no histórico.</div></div>
+  </div>}
+  {tab==='checkins'&&<div className="grid lg:grid-cols-2 gap-5"><form className="bg-white dark:bg-slate-900 border rounded-2xl p-5 space-y-3" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const p=pets.find(x=>x.id===String(f.get('pet')))!;run(()=>registerPetCheckin({appointment_id:String(f.get('appointment'))||undefined,customer_id:p.customer_id,pet_id:p.id,responsible_name:String(f.get('responsible')),weight:Number(f.get('weight'))||undefined,pre_existing_conditions:String(f.get('conditions')),belongings:String(f.get('belongings')),observations:String(f.get('notes')),photo_urls:String(f.get('photos')).split('\n').filter(Boolean),status:'entrada',checked_in_at:new Date().toISOString()}))}}><h3 className="font-bold text-sm flex gap-2"><ClipboardCheck className="w-4"/>Registrar entrada</h3><select name="pet" required className={field}>{pets.map(p=><option key={p.id} value={p.id}>{p.name} · {p.customer_name}</option>)}</select><select name="appointment" className={field}><option value="">Sem agendamento vinculado</option>{appointments.map(a=><option key={a.id} value={a.id}>{a.pet_name} · {formatDate(a.scheduled_at)}</option>)}</select><div className="grid grid-cols-2 gap-2"><input name="responsible" required placeholder="Responsável pela entrega" className={field}/><input name="weight" type="number" step="0.01" min="0" placeholder="Peso (kg)" className={field}/></div><textarea name="conditions" placeholder="Condições pré-existentes" className={field}/><input name="belongings" placeholder="Objetos entregues: guia, coleira..." className={field}/><textarea name="notes" placeholder="Observações" className={field}/><textarea name="photos" placeholder="Links das fotos, um por linha" className={field}/><button disabled={busy} className="px-4 py-2 bg-teal-600 text-white rounded-xl font-bold">Confirmar check-in</button></form><History items={petCheckins.map(x=>({id:x.id,title:`${pets.find(p=>p.id===x.pet_id)?.name||'Pet'} · ${x.responsible_name}`,body:x.pre_existing_conditions||'Sem condição prévia informada',date:x.checked_in_at,badge:x.status}))}/></div>}
+  {tab==='incidents'&&<div className="grid lg:grid-cols-2 gap-5"><form className="bg-white dark:bg-slate-900 border rounded-2xl p-5 space-y-3" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const p=pets.find(x=>x.id===String(f.get('pet')))!;run(()=>registerPetIncident({appointment_id:String(f.get('appointment'))||undefined,checkin_id:String(f.get('checkin'))||undefined,customer_id:p.customer_id,pet_id:p.id,incident_type:String(f.get('type')),severity:String(f.get('severity')) as any,description:String(f.get('description')),actions_taken:String(f.get('actions')),photo_urls:String(f.get('photos')).split('\n').filter(Boolean),tutor_notified:f.get('notified')==='on',tutor_notified_at:f.get('notified')==='on'?new Date().toISOString():undefined,occurred_at:new Date().toISOString()}))}}><h3 className="font-bold text-sm flex gap-2"><AlertTriangle className="w-4"/>Registrar ocorrência</h3><select name="pet" required className={field}>{pets.map(p=><option key={p.id} value={p.id}>{p.name} · {p.customer_name}</option>)}</select><div className="grid grid-cols-2 gap-2"><input name="type" required placeholder="Tipo da ocorrência" className={field}/><select name="severity" className={field}><option>leve</option><option>moderado</option><option>grave</option><option>critico</option></select></div><textarea name="description" required placeholder="Descrição detalhada" className={field}/><textarea name="actions" placeholder="Providências tomadas" className={field}/><textarea name="photos" placeholder="Links das fotos, um por linha" className={field}/><label className="flex gap-2"><input name="notified" type="checkbox"/>Tutor notificado</label><button disabled={busy} className="px-4 py-2 bg-amber-600 text-white rounded-xl font-bold">Gravar incidente</button></form><History items={petIncidents.map(x=>({id:x.id,title:`${pets.find(p=>p.id===x.pet_id)?.name||'Pet'} · ${x.incident_type}`,body:x.description,date:x.occurred_at,badge:x.severity}))}/></div>}
+ </div>
+}
+const History=({items}:{items:{id:string;title:string;body:string;date:string;badge:string}[]})=><div className="bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden"><h3 className="p-4 font-bold border-b">Histórico permanente</h3>{items.length?items.map(x=><div key={x.id} className="p-4 border-b last:border-0"><div className="flex justify-between gap-3"><b>{x.title}</b><span className="uppercase text-[10px] text-teal-700">{x.badge}</span></div><p className="text-slate-500 my-1">{x.body}</p><span className="text-slate-400">{formatDate(x.date)}</span></div>):<div className="p-8 text-center text-slate-400">Nenhum registro.</div>}</div>;
