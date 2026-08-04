@@ -1,7 +1,7 @@
 import { 
   Company, UserProfile, Customer, Pet, Service, 
   Appointment, Product, ServiceOrder, Sale, FinancialTransaction, 
-  LiabilityTerm, LoyaltyPackage, PetIncident, CashRegister, Supplier, DeliveryRequest
+  LiabilityTerm, PetIncident, CashRegister, Supplier, DeliveryRequest
 } from '../types';
 
 export const initialCompany: Company = {
@@ -502,22 +502,6 @@ export const initialLiabilityTerms: LiabilityTerm[] = [
 ];
 
 export const initialConsentTerms = initialLiabilityTerms;
-
-export const initialLoyaltyPackages: LoyaltyPackage[] = [
-  {
-    id: 'loyalty-1',
-    customer_id: 'cust-1',
-    customer_name: 'Fernanda Oliveira',
-    pet_id: 'pet-1',
-    pet_name: 'Thor',
-    package_name: 'Pacote Mensal 4 Banhos (Cão Grande)',
-    total_baths: 4,
-    used_baths: 2,
-    price_paid: 320.00,
-    expiration_date: new Date(Date.now() + 3600000 * 24 * 15).toISOString(),
-    status: 'ativo',
-  }
-];
 
 export const initialPetIncidents: PetIncident[] = [
   {
