@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { usePetGestor } from '../../context/AppContext';
 import { Pet, PetSpecies } from '../../types';
 import { PetFormModal } from './PetFormModal';
+import { PetRecordModal } from './PetRecordModal';
 import { 
-  Dog, Search, Plus, AlertTriangle, ShieldAlert, 
+  Dog, Search, Plus, AlertTriangle, ShieldAlert, Activity,
   Calendar, Edit3, Heart, Weight, User, Phone, Sparkles, ChevronRight
 } from 'lucide-react';
 
@@ -19,6 +20,7 @@ export const PetsView: React.FC<PetsViewProps> = ({ onOpenNewAppointmentWithPet 
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
+  const [recordPet, setRecordPet] = useState<Pet | null>(null);
 
   // Filtered pets
   const filteredPets = pets.filter(p => {
@@ -184,6 +186,7 @@ export const PetsView: React.FC<PetsViewProps> = ({ onOpenNewAppointmentWithPet 
 
                 {/* Card Bottom Actions */}
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                  <button onClick={()=>setRecordPet(pet)} className="p-2 rounded-xl border border-teal-200 text-teal-700 hover:bg-teal-50 text-xs font-semibold flex items-center gap-1"><Activity className="w-3.5 h-3.5"/> Histórico</button>
                   <button
                     onClick={() => {
                       setEditingPet(pet);
@@ -220,6 +223,7 @@ export const PetsView: React.FC<PetsViewProps> = ({ onOpenNewAppointmentWithPet 
         onClose={() => setIsModalOpen(false)}
         onSave={handleSavePet}
       />
+      <PetRecordModal pet={recordPet} onClose={()=>setRecordPet(null)}/>
     </div>
   );
 };
