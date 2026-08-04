@@ -33,8 +33,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
     return true;
   });
 
-  const handleGenerateComanda = (app: Appointment) => {
-    addServiceOrder({
+  const handleGenerateComanda = async (app: Appointment) => {
+    try {
+      await addServiceOrder({
       appointment_id: app.id,
       customer_id: app.customer_id,
       customer_name: app.customer_name,
@@ -60,9 +61,11 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
       paid_amount: 0,
       tutor_signature_accepted: true,
       notes: app.notes,
-    });
-    updateAppointmentStatus(app.id, 'recebido');
-    setCurrentView('comandas');
+      });
+      setCurrentView('comandas');
+    } catch {
+      // O contexto exibe a mensagem detalhada.
+    }
   };
 
   const handleConfirmCancel = () => {
