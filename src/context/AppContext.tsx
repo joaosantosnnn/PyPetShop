@@ -7,7 +7,7 @@ import {
 } from '../types';
 import { 
   initialCompany, initialProfiles,
-  initialFinancialTransactions, initialCashRegister, initialDeliveryRequests,
+  initialCashRegister, initialDeliveryRequests,
   initialConsentTerms, initialAuditLogs 
 } from '../data/initialData';
 import { generateId, formatBRL } from '../utils/formatters';
@@ -20,6 +20,9 @@ import {
   adjustProductStock, completeProductSale, insertProduct, insertSupplier,
   loadCommercialData, saveProduct, type SaleInput,
 } from '../services/commercialRepository';
+import {
+  addOrderItem, insertFinancialTransaction, loadServiceOrders, openServiceOrder, payServiceOrder,
+} from '../services/serviceOrderRepository';
 
 export type AppView = 
   | 'dashboard'
@@ -97,9 +100,10 @@ interface AppContextType {
   updateAppointment: (appointment: Appointment) => void;
   
   // Actions - Service Orders (Comandas)
-  addServiceOrder: (so: Omit<ServiceOrder, 'id' | 'company_id' | 'order_number'>) => ServiceOrder;
+  addServiceOrder: (so: Omit<ServiceOrder, 'id' | 'company_id' | 'order_number'>) => Promise<void>;
+  addServiceOrderItem: (orderId: string, type: 'service' | 'product' | 'internal_consumption', itemId: string, quantity: number) => Promise<void>;
   updateServiceOrder: (so: ServiceOrder) => void;
-  finalizeServiceOrder: (id: string, paymentMethod: string, paidAmount: number) => void;
+  finalizeServiceOrder: (id: string, paymentMethod: string, paidAmount: number) => Promise<void>;
   
   // Actions - Products & Stock
   addProduct: (product: Omit<Product, 'id' | 'company_id'>) => Product;
@@ -161,10 +165,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>(() => {
-    const saved = localStorage.getItem('petgestor_service_orders');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>([]);
 
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -172,10 +173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [sales, setSales] = useState<Sale[]>([]);
 
-  const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>(() => {
-    const saved = localStorage.getItem('petgestor_financials');
-    return saved ? JSON.parse(saved) : initialFinancialTransactions;
-  });
+  const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([]);
 
   const [cashRegister, setCashRegister] = useState<CashRegister>(() => {
     const saved = localStorage.getItem('petgestor_cash');
@@ -214,7 +212,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     Promise.all([
       loadOperationalData(currentProfile.company_id),
       loadCommercialData(currentProfile.company_id),
-    ]).then(([data, commercial]) => {
+      loadServiceOrders(currentProfile.company_id),
+    ]).then(([data, commercial, orders]) => {
         if (!active) return;
         setCompany(data.company);
         setCustomers(data.customers);
@@ -226,14 +225,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setStockMovements(commercial.stockMovements);
         setSales(commercial.sales);
         setSuppliers(commercial.suppliers);
+        setServiceOrders(orders.orders);
+        setFinancialTransactions(orders.financialTransactions);
       })
       .catch(() => {
         if (active) addToast('Não foi possível carregar os dados do PetShop.', 'error');
       });
     return () => { active = false; };
   }, [currentProfile.company_id]);
-  useEffect(() => { localStorage.setItem('petgestor_service_orders', JSON.stringify(serviceOrders)); }, [serviceOrders]);
-  useEffect(() => { localStorage.setItem('petgestor_financials', JSON.stringify(financialTransactions)); }, [financialTransactions]);
   useEffect(() => { localStorage.setItem('petgestor_cash', JSON.stringify(cashRegister)); }, [cashRegister]);
   useEffect(() => { localStorage.setItem('petgestor_audit', JSON.stringify(auditLogs)); }, [auditLogs]);
 
@@ -446,19 +445,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Service Orders (Comandas)
-  const addServiceOrder = (data: Omit<ServiceOrder, 'id' | 'company_id' | 'order_number'>) => {
-    const order_number = serviceOrders.length + 1001;
-    const newSO: ServiceOrder = {
-      ...data,
-      id: generateId(),
-      company_id: company.id,
-      order_number,
-      created_at: new Date().toISOString(),
-    };
-    setServiceOrders(prev => [newSO, ...prev]);
-    addToast(`Comanda #${order_number} gerada para ${newSO.pet_name}!`, 'success');
-    logAudit('Abertura de Comanda', 'Comanda', newSO.id, `Comanda #${order_number}`);
-    return newSO;
+  const addServiceOrder = async (data: Omit<ServiceOrder, 'id' | 'company_id' | 'order_number'>) => {
+    try {
+      if (!data.appointment_id) throw new Error('Agendamento não informado.');
+      await openServiceOrder(data.appointment_id);
+      const [orders, operational] = await Promise.all([loadServiceOrders(company.id), loadOperationalData(company.id)]);
+      setServiceOrders(orders.orders);
+      setFinancialTransactions(orders.financialTransactions);
+      setAppointments(operational.appointments);
+      addToast(`Comanda gerada para ${data.pet_name}!`, 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Não foi possível abrir a comanda.', 'error');
+      throw error;
+    }
+  };
+
+  const addServiceOrderItem = async (orderId: string, type: 'service' | 'product' | 'internal_consumption', itemId: string, quantity: number) => {
+    try {
+      await addOrderItem(orderId, type, itemId, quantity);
+      const orders = await loadServiceOrders(company.id);
+      setServiceOrders(orders.orders);
+      addToast('Item adicionado à comanda!', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Não foi possível adicionar o item.', 'error');
+      throw error;
+    }
   };
 
   const updateServiceOrder = (updated: ServiceOrder) => {
@@ -466,44 +477,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast(`Comanda #${updated.order_number} atualizada!`, 'info');
   };
 
-  const finalizeServiceOrder = (id: string, paymentMethod: string, paidAmount: number) => {
+  const finalizeServiceOrder = async (id: string, paymentMethod: string, paidAmount: number) => {
     const so = serviceOrders.find(s => s.id === id);
-    if (!so) return;
-
-    const updatedSO: ServiceOrder = {
-      ...so,
-      status: 'paga',
-      paid_amount: paidAmount,
-    };
-
-    setServiceOrders(prev => prev.map(s => s.id === id ? updatedSO : s));
-
-    // Register financial transaction
-    addFinancialTransaction({
-      type: 'receita',
-      category: 'Serviços',
-      description: `Comanda #${so.order_number} - ${so.pet_name}`,
-      amount: paidAmount,
-      due_date: new Date().toISOString().split('T')[0],
-      payment_date: new Date().toISOString().split('T')[0],
-      status: 'pago',
-      payment_method: paymentMethod as any,
-      customer_id: so.customer_id,
-      customer_name: so.customer_name,
-    });
-
-    // Update customer total spent
-    if (so.customer_id) {
-      setCustomers(prev => prev.map(c => {
-        if (c.id === so.customer_id) {
-          return { ...c, total_spent: c.total_spent + paidAmount };
-        }
-        return c;
-      }));
+    if (!so) throw new Error('Comanda não encontrada.');
+    try {
+      const receipt = await payServiceOrder(id, paidAmount, paymentMethod);
+      const [orders, commercial, operational] = await Promise.all([
+        loadServiceOrders(company.id), loadCommercialData(company.id), loadOperationalData(company.id),
+      ]);
+      setServiceOrders(orders.orders);
+      setFinancialTransactions(orders.financialTransactions);
+      setProducts(commercial.products);
+      setStockMovements(commercial.stockMovements);
+      setCustomers(operational.customers);
+      setAppointments(operational.appointments);
+      addToast(`Pagamento da comanda #${receipt.order_number} registrado!`, 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Não foi possível receber a comanda.', 'error');
+      throw error;
     }
-
-    addToast(`Comanda #${so.order_number} finalizada e receita registrada!`, 'success');
-    logAudit('Comanda Finalizada', 'Comanda', id, `Valor: ${formatBRL(paidAmount)}`);
   };
 
   // Products & Stock
@@ -690,6 +682,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
     setFinancialTransactions(prev => [newTrans, ...prev]);
+    insertFinancialTransaction(newTrans).catch(() => {
+      setFinancialTransactions(prev => prev.filter(item => item.id !== newTrans.id));
+      addToast('Não foi possível salvar o lançamento financeiro.', 'error');
+    });
     logAudit('Transação Financeira', 'Financeiro', newTrans.id, `${newTrans.type.toUpperCase()}: ${newTrans.description}`);
   };
 
@@ -789,7 +785,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addPet, updatePet,
       addService, updateService,
       addAppointment, updateAppointmentStatus, updateAppointment,
-      addServiceOrder, updateServiceOrder, finalizeServiceOrder,
+      addServiceOrder, addServiceOrderItem, updateServiceOrder, finalizeServiceOrder,
       addProduct, updateProduct, addStockMovement, adjustStock,
       completeSale, recordSale, cancelSale,
       addFinancialTransaction, updateTransactionStatus, updateCashRegister, registerCashMovement,
