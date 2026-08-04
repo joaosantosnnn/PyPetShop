@@ -60,7 +60,7 @@ const MainLayout: React.FC = () => {
         return <DeliveryView />;
       case 'loyalty':
         return <LoyaltyView />;
-      case 'terms':
+      case 'consent':
         return <TermsView />;
       case 'reports':
         return <ReportsView />;
