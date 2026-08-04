@@ -6,13 +6,17 @@ import {
   DeliveryRequest, ConsentTerm, AuditLog, AppointmentStatus, ServiceOrderStatus 
 } from '../types';
 import { 
-  initialCompany, initialProfiles, initialCustomers, 
-  initialPets, initialServices, initialAppointments, 
+  initialCompany, initialProfiles,
   initialProducts, initialSales, initialFinancialTransactions, 
   initialCashRegister, initialSuppliers, initialDeliveryRequests, 
   initialConsentTerms, initialAuditLogs 
 } from '../data/initialData';
 import { generateId, formatBRL } from '../utils/formatters';
+import { isSupabaseConfigured } from '../lib/supabase';
+import {
+  insertAppointment, insertCustomer, insertPet, insertService, loadOperationalData,
+  saveAppointment, saveCustomer, savePet, saveService,
+} from '../services/petshopRepository';
 
 export type AppView = 
   | 'dashboard'
@@ -121,7 +125,6 @@ interface AppContextType {
   
   // Audit Logger
   logAudit: (action: string, entity_type: string, entity_id?: string, details?: string) => void;
-  resetDemoData: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -139,31 +142,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialCompany;
   });
 
-  const [allProfiles] = useState<UserProfile[]>(initialProfiles);
+  const [allProfiles, setAllProfiles] = useState<UserProfile[]>(initialProfiles);
   const [currentProfile, setCurrentProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('petgestor_profile');
     return saved ? JSON.parse(saved) : initialProfiles[0];
   });
 
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('petgestor_customers');
-    return saved ? JSON.parse(saved) : initialCustomers;
-  });
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const [pets, setPets] = useState<Pet[]>(() => {
-    const saved = localStorage.getItem('petgestor_pets');
-    return saved ? JSON.parse(saved) : initialPets;
-  });
+  const [pets, setPets] = useState<Pet[]>([]);
 
-  const [services, setServices] = useState<Service[]>(() => {
-    const saved = localStorage.getItem('petgestor_services');
-    return saved ? JSON.parse(saved) : initialServices;
-  });
+  const [services, setServices] = useState<Service[]>([]);
 
-  const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const saved = localStorage.getItem('petgestor_appointments');
-    return saved ? JSON.parse(saved) : initialAppointments;
-  });
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>(() => {
     const saved = localStorage.getItem('petgestor_service_orders');
@@ -224,10 +215,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [theme]);
 
-  useEffect(() => { localStorage.setItem('petgestor_customers', JSON.stringify(customers)); }, [customers]);
-  useEffect(() => { localStorage.setItem('petgestor_pets', JSON.stringify(pets)); }, [pets]);
-  useEffect(() => { localStorage.setItem('petgestor_services', JSON.stringify(services)); }, [services]);
-  useEffect(() => { localStorage.setItem('petgestor_appointments', JSON.stringify(appointments)); }, [appointments]);
+  useEffect(() => {
+    if (!isSupabaseConfigured || !currentProfile.company_id) return;
+    let active = true;
+    loadOperationalData(currentProfile.company_id)
+      .then(data => {
+        if (!active) return;
+        setCompany(data.company);
+        setCustomers(data.customers);
+        setPets(data.pets);
+        setServices(data.services);
+        setAppointments(data.appointments);
+        setAllProfiles(data.profiles);
+      })
+      .catch(() => {
+        if (active) addToast('Não foi possível carregar os dados do PetShop.', 'error');
+      });
+    return () => { active = false; };
+  }, [currentProfile.company_id]);
   useEffect(() => { localStorage.setItem('petgestor_service_orders', JSON.stringify(serviceOrders)); }, [serviceOrders]);
   useEffect(() => { localStorage.setItem('petgestor_products', JSON.stringify(products)); }, [products]);
   useEffect(() => { localStorage.setItem('petgestor_sales', JSON.stringify(sales)); }, [sales]);
@@ -283,27 +288,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
     setCustomers(prev => [newCust, ...prev]);
+    insertCustomer(newCust).catch(() => {
+      setCustomers(prev => prev.filter(item => item.id !== newCust.id));
+      addToast(`Não foi possível cadastrar ${newCust.name}.`, 'error');
+    });
     addToast(`Cliente ${newCust.name} cadastrado(a) com sucesso!`, 'success');
     logAudit('Novo Cliente', 'Cliente', newCust.id, newCust.name);
     return newCust;
   };
 
   const updateCustomer = (updated: Customer) => {
+    const previous = customers.find(item => item.id === updated.id);
     setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
+    saveCustomer(updated).catch(() => {
+      if (previous) setCustomers(prev => prev.map(item => item.id === previous.id ? previous : item));
+      addToast(`Não foi possível atualizar ${updated.name}.`, 'error');
+    });
     addToast(`Cliente ${updated.name} atualizado(a)!`, 'success');
     logAudit('Edição de Cliente', 'Cliente', updated.id, updated.name);
   };
 
   const toggleCustomerActive = (id: string) => {
+    const current = customers.find(item => item.id === id);
+    if (!current) return;
+    const updated = { ...current, is_active: !current.is_active };
     setCustomers(prev => prev.map(c => {
       if (c.id === id) {
-        const nextState = !c.is_active;
+        const nextState = updated.is_active;
         addToast(`Cliente ${c.name} ${nextState ? 'ativado(a)' : 'inativado(a)'}`, 'info');
         logAudit('Inativação/Ativação de Cliente', 'Cliente', c.id, `Status: ${nextState}`);
-        return { ...c, is_active: nextState };
+        return updated;
       }
       return c;
     }));
+    saveCustomer(updated).catch(() => {
+      setCustomers(prev => prev.map(item => item.id === current.id ? current : item));
+      addToast(`Não foi possível alterar o status de ${current.name}.`, 'error');
+    });
   };
 
   // Pets CRUD
@@ -315,13 +336,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
     setPets(prev => [newPet, ...prev]);
+    insertPet(newPet).catch(() => {
+      setPets(prev => prev.filter(item => item.id !== newPet.id));
+      addToast(`Não foi possível cadastrar ${newPet.name}.`, 'error');
+    });
     addToast(`Pet ${newPet.name} cadastrado(a)!`, 'success');
     logAudit('Novo Pet', 'Pet', newPet.id, `${newPet.name} (${newPet.species})`);
     return newPet;
   };
 
   const updatePet = (updated: Pet) => {
+    const previous = pets.find(item => item.id === updated.id);
     setPets(prev => prev.map(p => p.id === updated.id ? updated : p));
+    savePet(updated).catch(() => {
+      if (previous) setPets(prev => prev.map(item => item.id === previous.id ? previous : item));
+      addToast(`Não foi possível atualizar ${updated.name}.`, 'error');
+    });
     addToast(`Dados do pet ${updated.name} atualizados!`, 'success');
     logAudit('Edição de Pet', 'Pet', updated.id, updated.name);
   };
@@ -334,13 +364,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       company_id: company.id,
     };
     setServices(prev => [...prev, newSrv]);
+    insertService(newSrv).catch(() => {
+      setServices(prev => prev.filter(item => item.id !== newSrv.id));
+      addToast(`Não foi possível cadastrar ${newSrv.name}.`, 'error');
+    });
     addToast(`Serviço ${newSrv.name} adicionado!`, 'success');
     logAudit('Novo Serviço', 'Serviço', newSrv.id, newSrv.name);
     return newSrv;
   };
 
   const updateService = (updated: Service) => {
+    const previous = services.find(item => item.id === updated.id);
     setServices(prev => prev.map(s => s.id === updated.id ? updated : s));
+    saveService(updated).catch(() => {
+      if (previous) setServices(prev => prev.map(item => item.id === previous.id ? previous : item));
+      addToast(`Não foi possível atualizar ${updated.name}.`, 'error');
+    });
     addToast(`Serviço ${updated.name} atualizado!`, 'success');
     logAudit('Edição de Serviço', 'Serviço', updated.id, updated.name);
   };
@@ -367,29 +406,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setAppointments(prev => [newApp, ...prev]);
+    insertAppointment(newApp).catch(() => {
+      setAppointments(prev => prev.filter(item => item.id !== newApp.id));
+      addToast(`Não foi possível criar o agendamento de ${newApp.pet_name}.`, 'error');
+    });
     addToast(`Agendamento criado para ${newApp.pet_name}!`, 'success');
     logAudit('Novo Agendamento', 'Agendamento', newApp.id, `${newApp.pet_name} - ${newApp.scheduled_at}`);
     return newApp;
   };
 
   const updateAppointmentStatus = (id: string, status: AppointmentStatus, reason?: string) => {
+    const previous = appointments.find(item => item.id === id);
+    if (!previous) return;
+    const nextAppointment = {
+      ...previous,
+      status,
+      cancellation_reason: reason || previous.cancellation_reason,
+    };
     setAppointments(prev => prev.map(a => {
       if (a.id === id) {
-        const updated = { 
-          ...a, 
-          status, 
-          cancellation_reason: reason || a.cancellation_reason 
-        };
         addToast(`Agendamento de ${a.pet_name} alterado para "${status.replace('_', ' ').toUpperCase()}"`, 'info');
         logAudit('Status de Agendamento', 'Agendamento', id, `De ${a.status} para ${status}`);
-        return updated;
+        return nextAppointment;
       }
       return a;
     }));
+    saveAppointment(nextAppointment).catch(() => {
+      setAppointments(prev => prev.map(item => item.id === previous.id ? previous : item));
+      addToast('Não foi possível alterar o status do agendamento.', 'error');
+    });
   };
 
   const updateAppointment = (updated: Appointment) => {
+    const previous = appointments.find(item => item.id === updated.id);
     setAppointments(prev => prev.map(a => a.id === updated.id ? updated : a));
+    saveAppointment(updated).catch(() => {
+      if (previous) setAppointments(prev => prev.map(item => item.id === previous.id ? previous : item));
+      addToast('Não foi possível atualizar o agendamento.', 'error');
+    });
     addToast(`Agendamento de ${updated.pet_name} atualizado!`, 'success');
     logAudit('Edição de Agendamento', 'Agendamento', updated.id, updated.pet_name);
   };
@@ -673,26 +727,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast(`Status do transporte atualizado para "${status.toUpperCase()}"`, 'info');
   };
 
-  // Reset Demo Data
-  const resetDemoData = () => {
-    localStorage.clear();
-    setCompany(initialCompany);
-    setCurrentProfile(initialProfiles[0]);
-    setCustomers(initialCustomers);
-    setPets(initialPets);
-    setServices(initialServices);
-    setAppointments(initialAppointments);
-    setServiceOrders([]);
-    setProducts(initialProducts);
-    setSales(initialSales);
-    setFinancialTransactions(initialFinancialTransactions);
-    setCashRegister(initialCashRegister);
-    setSuppliers(initialSuppliers);
-    setDeliveryRequests(initialDeliveryRequests);
-    setAuditLogs(initialAuditLogs);
-    addToast('Dados demonstrativos restaurados com sucesso!', 'success');
-  };
-
   return (
     <AppContext.Provider value={{
       currentView, setCurrentView,
@@ -711,7 +745,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       completeSale, cancelSale,
       addFinancialTransaction, updateTransactionStatus, updateCashRegister, registerCashMovement,
       addSupplier, addDeliveryRequest, updateDeliveryStatus,
-      toasts, addToast, removeToast, logAudit, resetDemoData
+      toasts, addToast, removeToast, logAudit
     }}>
       {children}
     </AppContext.Provider>
