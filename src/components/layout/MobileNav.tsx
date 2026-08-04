@@ -30,6 +30,7 @@ export const MobileNav: React.FC = () => {
     { id: 'products', label: 'Produtos & Preços', icon: Package, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
     { id: 'stock', label: 'Estoque & Movimentações', icon: Package, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
     { id: 'suppliers', label: 'Fornecedores & Pedidos', icon: Truck, roles: ['proprietario', 'administrador', 'gerente', 'estoquista'] },
+    { id: 'purchases', label: 'Pedidos de Compra', icon: Package, roles: ['proprietario','administrador','gerente','estoquista'] },
     { id: 'financial', label: 'Financeiro & Caixa', icon: DollarSign, roles: ['proprietario', 'administrador', 'gerente', 'caixa'] },
     { id: 'employees', label: 'Equipe & Comissões', icon: UserCheck, roles: ['proprietario', 'administrador'] },
     { id: 'delivery', label: 'Busca & Entrega (Táxi)', icon: Truck },
