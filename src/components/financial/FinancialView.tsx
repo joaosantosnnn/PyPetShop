@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PixPaymentsPanel } from './PixPaymentsPanel';
 import { PixReceiptsPanel } from './PixReceiptsPanel';
+import { RefundsPanel } from './RefundsPanel';
 import { usePetGestor } from '../../context/AppContext';
 import { formatBRL, formatDate } from '../../utils/formatters';
 import { 
@@ -52,6 +53,7 @@ export const FinancialView: React.FC = () => {
     <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
       <PixPaymentsPanel />
       <PixReceiptsPanel />
+      <RefundsPanel />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
