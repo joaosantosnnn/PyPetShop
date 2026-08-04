@@ -47,16 +47,20 @@ export const InventoryView: React.FC = () => {
     exportToExcel(data, 'Estoque_PetGestor');
   };
 
-  const handleConfirmStockAdjustment = () => {
+  const handleConfirmStockAdjustment = async () => {
     if (stockAdjustmentProduct && adjustmentQuantity !== 0) {
-      adjustStock(
-        stockAdjustmentProduct.id,
-        adjustmentQuantity,
-        adjustmentReason as any,
-        `Ajuste manual: ${adjustmentReason}`
-      );
-      setStockAdjustmentProduct(null);
-      setAdjustmentQuantity(0);
+      try {
+        await adjustStock(
+          stockAdjustmentProduct.id,
+          adjustmentQuantity,
+          adjustmentReason,
+          `Ajuste manual: ${adjustmentReason}`
+        );
+        setStockAdjustmentProduct(null);
+        setAdjustmentQuantity(0);
+      } catch {
+        // O contexto já exibe a mensagem detalhada do banco.
+      }
     }
   };
 
