@@ -7,8 +7,7 @@ import {
 } from '../types';
 import { 
   initialCompany, initialProfiles,
-  initialProducts, initialSales, initialFinancialTransactions, 
-  initialCashRegister, initialSuppliers, initialDeliveryRequests, 
+  initialFinancialTransactions, initialCashRegister, initialDeliveryRequests,
   initialConsentTerms, initialAuditLogs 
 } from '../data/initialData';
 import { generateId, formatBRL } from '../utils/formatters';
@@ -17,6 +16,10 @@ import {
   insertAppointment, insertCustomer, insertPet, insertService, loadOperationalData,
   saveAppointment, saveCustomer, savePet, saveService,
 } from '../services/petshopRepository';
+import {
+  adjustProductStock, completeProductSale, insertProduct, insertSupplier,
+  loadCommercialData, saveProduct, type SaleInput,
+} from '../services/commercialRepository';
 
 export type AppView = 
   | 'dashboard'
@@ -102,9 +105,11 @@ interface AppContextType {
   addProduct: (product: Omit<Product, 'id' | 'company_id'>) => Product;
   updateProduct: (product: Product) => void;
   addStockMovement: (movement: Omit<StockMovement, 'id' | 'company_id' | 'created_at'>) => void;
+  adjustStock: (productId: string, quantity: number, movementType: string, reason: string) => Promise<void>;
   
   // Actions - Sales / POS
   completeSale: (saleData: Omit<Sale, 'id' | 'company_id' | 'sale_number' | 'created_at'>) => Sale;
+  recordSale: (saleData: SaleInput) => Promise<{ id: string; sale_number: number; subtotal: number; total_amount: number; change_amount: number; created_at: string }>;
   cancelSale: (saleId: string, reason: string) => void;
   
   // Actions - Financial & Cash Register
@@ -161,20 +166,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('petgestor_products');
-    return saved ? JSON.parse(saved) : initialProducts;
-  });
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [stockMovements, setStockMovements] = useState<StockMovement[]>(() => {
-    const saved = localStorage.getItem('petgestor_stock_movements');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
 
-  const [sales, setSales] = useState<Sale[]>(() => {
-    const saved = localStorage.getItem('petgestor_sales');
-    return saved ? JSON.parse(saved) : initialSales;
-  });
+  const [sales, setSales] = useState<Sale[]>([]);
 
   const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>(() => {
     const saved = localStorage.getItem('petgestor_financials');
@@ -186,10 +182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialCashRegister;
   });
 
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
-    const saved = localStorage.getItem('petgestor_suppliers');
-    return saved ? JSON.parse(saved) : initialSuppliers;
-  });
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>(() => {
     const saved = localStorage.getItem('petgestor_delivery');
@@ -218,8 +211,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isSupabaseConfigured || !currentProfile.company_id) return;
     let active = true;
-    loadOperationalData(currentProfile.company_id)
-      .then(data => {
+    Promise.all([
+      loadOperationalData(currentProfile.company_id),
+      loadCommercialData(currentProfile.company_id),
+    ]).then(([data, commercial]) => {
         if (!active) return;
         setCompany(data.company);
         setCustomers(data.customers);
@@ -227,6 +222,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setServices(data.services);
         setAppointments(data.appointments);
         setAllProfiles(data.profiles);
+        setProducts(commercial.products);
+        setStockMovements(commercial.stockMovements);
+        setSales(commercial.sales);
+        setSuppliers(commercial.suppliers);
       })
       .catch(() => {
         if (active) addToast('Não foi possível carregar os dados do PetShop.', 'error');
@@ -234,8 +233,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => { active = false; };
   }, [currentProfile.company_id]);
   useEffect(() => { localStorage.setItem('petgestor_service_orders', JSON.stringify(serviceOrders)); }, [serviceOrders]);
-  useEffect(() => { localStorage.setItem('petgestor_products', JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem('petgestor_sales', JSON.stringify(sales)); }, [sales]);
   useEffect(() => { localStorage.setItem('petgestor_financials', JSON.stringify(financialTransactions)); }, [financialTransactions]);
   useEffect(() => { localStorage.setItem('petgestor_cash', JSON.stringify(cashRegister)); }, [cashRegister]);
   useEffect(() => { localStorage.setItem('petgestor_audit', JSON.stringify(auditLogs)); }, [auditLogs]);
@@ -515,16 +512,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...data,
       id: generateId(),
       company_id: company.id,
+      sale_price: data.selling_price ?? data.sale_price ?? 0,
+      selling_price: data.selling_price ?? data.sale_price ?? 0,
+      min_stock: data.minimum_stock ?? data.min_stock ?? 0,
+      minimum_stock: data.minimum_stock ?? data.min_stock ?? 0,
+      max_stock: data.max_stock ?? 0,
+      sell_by_weight: data.sell_by_weight ?? false,
+      profit_margin_percent: data.profit_margin_percent ?? 0,
       created_at: new Date().toISOString(),
     };
     setProducts(prev => [newProd, ...prev]);
+    insertProduct(newProd).catch(() => {
+      setProducts(prev => prev.filter(item => item.id !== newProd.id));
+      addToast(`Não foi possível cadastrar ${newProd.name}.`, 'error');
+    });
     addToast(`Produto ${newProd.name} cadastrado!`, 'success');
     logAudit('Novo Produto', 'Produto', newProd.id, newProd.name);
     return newProd;
   };
 
   const updateProduct = (updated: Product) => {
+    const previous = products.find(item => item.id === updated.id);
     setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+    saveProduct(updated).catch(() => {
+      if (previous) setProducts(prev => prev.map(item => item.id === previous.id ? previous : item));
+      addToast(`Não foi possível atualizar ${updated.name}.`, 'error');
+    });
     addToast(`Produto ${updated.name} atualizado!`, 'success');
     logAudit('Edição de Produto', 'Produto', updated.id, updated.name);
   };
@@ -559,6 +572,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStockMovements(prev => [newMov, ...prev]);
     addToast(`Estoque de ${product.name} ajustado para ${new_stock} ${product.unit}`, 'info');
     logAudit('Movimentação de Estoque', 'Estoque', product.id, `Tipo: ${data.movement_type} | Qtd: ${qtyChange}`);
+  };
+
+  const adjustStock = async (productId: string, quantity: number, movementType: string, reason: string) => {
+    try {
+      await adjustProductStock(productId, quantity, movementType, reason);
+      const commercial = await loadCommercialData(company.id);
+      setProducts(commercial.products);
+      setStockMovements(commercial.stockMovements);
+      addToast('Movimentação de estoque registrada!', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Não foi possível ajustar o estoque.', 'error');
+      throw error;
+    }
   };
 
   // Sales / POS
@@ -610,6 +636,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast(`Venda #${sale_number} concluída com sucesso! Total: ${formatBRL(newSale.total)}`, 'success');
     logAudit('Venda Realizada', 'Venda', newSale.id, `Venda #${sale_number} | Valor: ${formatBRL(newSale.total)}`);
     return newSale;
+  };
+
+  const recordSale = async (data: SaleInput) => {
+    try {
+      const receipt = await completeProductSale(data);
+      const [commercial, operational] = await Promise.all([
+        loadCommercialData(company.id),
+        loadOperationalData(company.id),
+      ]);
+      setProducts(commercial.products);
+      setStockMovements(commercial.stockMovements);
+      setSales(commercial.sales);
+      setCustomers(operational.customers);
+      addToast(`Venda #${receipt.sale_number} concluída com sucesso!`, 'success');
+      return receipt;
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Não foi possível concluir a venda.', 'error');
+      throw error;
+    }
   };
 
   const cancelSale = (saleId: string, reason: string) => {
@@ -709,6 +754,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       company_id: company.id,
     };
     setSuppliers(prev => [...prev, newSupp]);
+    insertSupplier(newSupp).catch(() => {
+      setSuppliers(prev => prev.filter(item => item.id !== newSupp.id));
+      addToast(`Não foi possível cadastrar ${newSupp.trade_name || newSupp.company_name}.`, 'error');
+    });
     addToast(`Fornecedor ${newSupp.trade_name || newSupp.company_name} cadastrado!`, 'success');
   };
 
@@ -741,8 +790,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addService, updateService,
       addAppointment, updateAppointmentStatus, updateAppointment,
       addServiceOrder, updateServiceOrder, finalizeServiceOrder,
-      addProduct, updateProduct, addStockMovement,
-      completeSale, cancelSale,
+      addProduct, updateProduct, addStockMovement, adjustStock,
+      completeSale, recordSale, cancelSale,
       addFinancialTransaction, updateTransactionStatus, updateCashRegister, registerCashMovement,
       addSupplier, addDeliveryRequest, updateDeliveryStatus,
       toasts, addToast, removeToast, logAudit
