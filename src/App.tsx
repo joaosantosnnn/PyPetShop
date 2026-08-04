@@ -36,6 +36,7 @@ import { PortalReceiptsWidget } from './components/portal/PortalReceiptsWidget';
 import { PortalAppointmentActions } from './components/portal/PortalAppointmentActions';
 import { PortalCreditsWidget } from './components/portal/PortalCreditsWidget';
 import { canAccessView } from './utils/permissions';
+import { ViewErrorBoundary } from './components/common/ViewErrorBoundary';
 
 const MainLayout: React.FC = () => {
   const { currentView } = usePetGestor();
@@ -100,7 +101,9 @@ const MainLayout: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-6 custom-scrollbar">
-          {renderView()}
+          <ViewErrorBoundary viewKey={currentView} onBack={() => setCurrentView('dashboard')}>
+            {renderView()}
+          </ViewErrorBoundary>
         </main>
       </div>
       <MobileNav />
