@@ -5,6 +5,7 @@ import {
   Menu, X, Dog, Users, Sparkles, Package, DollarSign, 
   Truck, Settings, FileText, BarChart3, UserCheck, HeartHandshake, ClipboardList, ShieldAlert, CalendarOff, MessageCircle, DatabaseBackup
 } from 'lucide-react';
+import { canAccessView } from '../../utils/permissions';
 
 export const MobileNav: React.FC = () => {
   const { currentView, setCurrentView, company, currentProfile } = usePetGestor();
@@ -48,7 +49,7 @@ export const MobileNav: React.FC = () => {
     <>
       {/* Bottom Bar Navigation for Mobile */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-around z-40 px-2 shadow-lg">
-        {mainTabs.filter(item => !item.roles || item.roles.includes(currentProfile.role)).map(tab => {
+        {mainTabs.filter(item => canAccessView(currentProfile.role,item.id)).map(tab => {
           const Icon = tab.icon;
           const isActive = currentView === tab.id;
           return (
@@ -91,7 +92,7 @@ export const MobileNav: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 space-y-1">
-              {allDrawerItems.filter(item => !item.roles || item.roles.includes(currentProfile.role)).map(item => {
+              {allDrawerItems.filter(item => canAccessView(currentProfile.role,item.id)).map(item => {
                 const Icon = item.icon;
                 const isActive = currentView === item.id;
                 return (
