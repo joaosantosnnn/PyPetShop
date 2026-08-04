@@ -1,20 +1,53 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# PetGestor
 
-# Run and deploy your AI Studio app
+Sistema de gestão para pet shops com atendimento de banho e tosa, agenda, comandas, frente de caixa, estoque, financeiro e relacionamento com clientes.
 
-This contains everything you need to run your app locally.
+## Tecnologias
 
-View your app in AI Studio: https://ai.studio/apps/a29cfe97-8091-4365-86b1-6f85b741e215
+- React 19 e TypeScript
+- Vite e Tailwind CSS 4
+- Node.js e Express
+- Supabase
+- Capacitor 8
+- Lucide React, Motion, Recharts e XLSX
 
-## Run Locally
+## Pré-requisitos
 
-**Prerequisites:**  Node.js
+- Node.js 22 ou superior
+- npm
+- Projeto no Supabase
 
+## Configuração
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. Instale as dependências:
+
+   ```bash
+   npm install
+   ```
+
+2. Crie um arquivo `.env.local` com base no `.env.example`.
+
+3. Preencha a URL e a chave publicável do projeto Supabase.
+
+4. Inicie o ambiente de desenvolvimento:
+
+   ```bash
+   npm run dev
+   ```
+
+## Verificações
+
+```bash
+npm run lint
+npm run build
+```
+
+## Aplicativos móveis
+
+```bash
+npm run cap:sync
+npm run cap:open-android
+npm run cap:open-ios
+```
+
+As credenciais administrativas do Supabase nunca devem ser adicionadas ao frontend ou ao repositório.
