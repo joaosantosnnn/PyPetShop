@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Scissors, ClipboardList, 
   ShoppingCart, Users, Dog, Sparkles, Package, 
   Truck, DollarSign, UserCheck, HeartHandshake, 
-  FileText, BarChart3, ShieldAlert, Settings, ChevronRight
+  FileText, BarChart3, ShieldAlert, Settings, CalendarOff
 } from 'lucide-react';
 
 interface NavItem {
@@ -41,6 +41,7 @@ export const Sidebar: React.FC = () => {
     { id: 'consent', label: 'Termos & Incidentes', icon: FileText },
     { id: 'reports', label: 'Relatórios', icon: BarChart3, roles: ['proprietario', 'administrador', 'gerente'] },
     { id: 'audit', label: 'Auditoria', icon: ShieldAlert, roles: ['proprietario', 'administrador'] },
+    { id: 'availability', label: 'Bloqueios da Agenda', icon: CalendarOff, roles: ['proprietario', 'administrador', 'gerente', 'atendente'] },
     { id: 'settings', label: 'Configurações', icon: Settings, roles: ['proprietario', 'administrador'] },
   ];
 
