@@ -28,6 +28,7 @@ export const POSView: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'fiado'>('pix');
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<any | null>(null);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   // Filter products for catalog
   const filteredProducts = products.filter(p => {
@@ -45,6 +46,7 @@ export const POSView: React.FC = () => {
     setCartItems(prev => {
       const existing = prev.find(i => i.item_id === product.id);
       if (existing) {
+        if (existing.quantity >= product.current_stock) return prev;
         return prev.map(i => 
           i.item_id === product.id 
             ? { ...i, quantity: i.quantity + 1, total_price: (i.quantity + 1) * i.unit_price }
@@ -84,7 +86,7 @@ export const POSView: React.FC = () => {
   const finalTotal = Math.max(0, subtotal - discount);
   const changeAmount = paymentMethod === 'dinheiro' ? Math.max(0, amountPaid - finalTotal) : 0;
 
-  const handleFinalizeSale = () => {
+  const handleFinalizeSale = async () => {
     if (cartItems.length === 0) return;
 
     const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
@@ -108,11 +110,16 @@ export const POSView: React.FC = () => {
       change_amount: changeAmount,
     };
 
-    recordSale(saleRecord);
-    setLastSaleReceipt(saleRecord);
-    setCartItems([]);
-    setDiscount(0);
-    setAmountPaid(0);
+    setIsFinalizing(true);
+    try {
+      const receipt = await recordSale(saleRecord);
+      setLastSaleReceipt({ ...saleRecord, ...receipt });
+      setCartItems([]);
+      setDiscount(0);
+      setAmountPaid(0);
+    } finally {
+      setIsFinalizing(false);
+    }
   };
 
   return (
@@ -313,11 +320,11 @@ export const POSView: React.FC = () => {
             )}
 
             <button
-              disabled={cartItems.length === 0}
+              disabled={cartItems.length === 0 || isFinalizing}
               onClick={handleFinalizeSale}
               className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm shadow-md transition"
             >
-              Finalizar Venda & Emitir Recibo
+              {isFinalizing ? 'Finalizando venda...' : 'Finalizar Venda & Emitir Recibo'}
             </button>
           </div>
         </div>
