@@ -1,0 +1,11 @@
+create index liability_terms_created_by_idx on public.liability_terms(created_by);
+create index term_acceptances_term_idx on public.term_acceptances(term_id);
+create index term_acceptances_customer_idx on public.term_acceptances(customer_id);
+create index term_acceptances_pet_idx on public.term_acceptances(pet_id) where pet_id is not null;
+create index term_acceptances_created_by_idx on public.term_acceptances(created_by);
+create index pet_checkins_customer_idx on public.pet_checkins(customer_id);
+create index pet_checkins_pet_idx on public.pet_checkins(pet_id);
+create index pet_checkins_created_by_idx on public.pet_checkins(created_by);
+create index pet_incidents_customer_idx on public.pet_incidents(customer_id);
+create index pet_incidents_pet_idx on public.pet_incidents(pet_id);
+create index pet_incidents_created_by_idx on public.pet_incidents(created_by);
