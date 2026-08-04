@@ -1,156 +1,19 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Award, Plus } from 'lucide-react';
 import { usePetGestor } from '../../context/AppContext';
-import { LoyaltyPackage, StampCard } from '../../types';
 import { formatBRL, formatDate } from '../../utils/formatters';
-import { Award, Plus, CheckCircle, Clock, Gift, Sparkles } from 'lucide-react';
 
-export const LoyaltyView: React.FC = () => {
-  const { customers, pets, loyaltyPackages, addLoyaltyPackage } = usePetGestor();
+const fieldClass='w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900';
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id || '');
-  const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id || '');
-  const [packageName, setPackageName] = useState('Pacote Mensal 4 Banhos');
-  const [totalBaths, setTotalBaths] = useState(4);
-  const [pricePaid, setPricePaid] = useState(200);
-
-  const handleCreatePackage = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cust = customers.find(c => c.id === selectedCustomerId);
-    const pet = pets.find(p => p.id === selectedPetId);
-
-    const expDate = new Date();
-    expDate.setDate(expDate.getDate() + 30);
-
-    addLoyaltyPackage({
-      customer_id: selectedCustomerId,
-      customer_name: cust?.name || '',
-      pet_id: selectedPetId,
-      pet_name: pet?.name || '',
-      package_name: packageName,
-      total_baths: Number(totalBaths),
-      used_baths: 0,
-      price_paid: Number(pricePaid),
-      expiration_date: expDate.toISOString(),
-      status: 'ativo',
-    });
-    setIsModalOpen(false);
-  };
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Award className="w-6 h-6 text-teal-600" />
-            Pacotes Mensais & Cartão Fidelidade
-          </h2>
-          <p className="text-xs text-slate-500">
-            Assinaturas de banho recorrentes, controle de saldo e prazos de validade
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md transition"
-        >
-          <Plus className="w-4 h-4" /> Vender Novo Pacote
-        </button>
-      </div>
-
-      {/* Packages Active List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loyaltyPackages.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-            Nenhum pacote mensal de banhos ativo.
-          </div>
-        ) : (
-          loyaltyPackages.map(pkg => {
-            const remaining = pkg.total_baths - pkg.used_baths;
-
-            return (
-              <div
-                key={pkg.id}
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition space-y-4"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                    {pkg.package_name}
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
-                    {pkg.status}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 space-y-1 text-xs">
-                  <p className="font-bold text-slate-800 dark:text-slate-200">Pet: {pkg.pet_name}</p>
-                  <p className="text-slate-600 dark:text-slate-400">Tutor: {pkg.customer_name}</p>
-                  <p className="text-slate-500 text-[11px]">Validade: {formatDate(pkg.expiration_date)}</p>
-                </div>
-
-                {/* Progress bar */}
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Banhos Utilizados</span>
-                    <span className="text-teal-600">{pkg.used_baths} de {pkg.total_baths} ({remaining} restantes)</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-teal-600 h-full transition-all"
-                      style={{ width: `${(pkg.used_baths / pkg.total_baths) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* New Package Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <form onSubmit={handleCreatePackage} className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md border space-y-4 text-xs">
-            <h3 className="font-bold text-base">Vender Pacote de Banhos</h3>
-
-            <div>
-              <label className="block font-semibold mb-1">Cliente / Tutor</label>
-              <select value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)} className="w-full px-3 py-2 border rounded-xl">
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1">Pet Beneficiário</label>
-              <select value={selectedPetId} onChange={e => setSelectedPetId(e.target.value)} className="w-full px-3 py-2 border rounded-xl">
-                {pets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.customer_name})</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1">Nome do Pacote</label>
-              <input type="text" value={packageName} onChange={e => setPackageName(e.target.value)} className="w-full px-3 py-2 border rounded-xl font-bold" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold mb-1">Qtde de Banhos</label>
-                <input type="number" value={totalBaths} onChange={e => setTotalBaths(Number(e.target.value))} className="w-full px-3 py-2 border rounded-xl font-bold" />
-              </div>
-              <div>
-                <label className="block font-semibold mb-1">Preço Total (R$)</label>
-                <input type="number" value={pricePaid} onChange={e => setPricePaid(Number(e.target.value))} className="w-full px-3 py-2 border rounded-xl font-bold text-teal-600" />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-xl">Cancelar</button>
-              <button type="submit" className="px-5 py-2 bg-teal-600 text-white rounded-xl font-bold">Confirmar Pacote</button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
-  );
+export const LoyaltyView:React.FC=()=>{
+ const {customers,pets,services,currentProfile,loyaltyPackages,sellPackage}=usePetGestor();
+ const [open,setOpen]=useState(false);const [saving,setSaving]=useState(false);const [customerId,setCustomerId]=useState('');const [petId,setPetId]=useState('');const [serviceId,setServiceId]=useState('');const [name,setName]=useState('Pacote Mensal 4 Banhos');const [uses,setUses]=useState(4);const [days,setDays]=useState(30);const [price,setPrice]=useState(200);const [payment,setPayment]=useState('pix');
+ const customerPets=useMemo(()=>pets.filter(p=>p.customer_id===customerId&&p.is_active),[pets,customerId]);
+ const canSell=['proprietario','administrador','gerente','caixa'].includes(currentProfile.role);
+ const submit=async(e:React.FormEvent)=>{e.preventDefault();setSaving(true);try{await sellPackage({customerId,petId,serviceId,name,totalUses:uses,validityDays:days,price,paymentMethod:payment});setOpen(false);setCustomerId('');setPetId('');}finally{setSaving(false)}};
+ return <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><h2 className="flex items-center gap-2 text-xl font-bold"><Award className="h-6 w-6 text-teal-600"/>Pacotes de serviços</h2><p className="text-xs text-slate-500">Contratação, validade, saldo e baixa automática ao entregar o pet.</p></div>{canSell&&<button onClick={()=>setOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white"><Plus className="h-4 w-4"/>Vender pacote</button>}</div>
+  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{loyaltyPackages.length===0?<div className="col-span-full rounded-2xl border bg-white py-12 text-center text-slate-500 dark:border-slate-800 dark:bg-slate-900">Nenhum pacote contratado.</div>:loyaltyPackages.map(pkg=>{const remaining=pkg.total_uses-pkg.used_uses;const expired=pkg.status==='ativo'&&new Date(pkg.expires_at)<new Date();return <article key={pkg.id} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between gap-2"><h3 className="font-bold">{pkg.package_name}</h3><span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${pkg.status==='ativo'&&!expired?'bg-emerald-100 text-emerald-800':'bg-slate-100 text-slate-600'}`}>{expired?'expirado':pkg.status}</span></div><div className="rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800/50"><p className="font-bold">Pet: {pkg.pet_name}</p><p>Tutor: {pkg.customer_name}</p><p>Serviço: {pkg.service_name}</p><p>Validade: {formatDate(pkg.expires_at)} · Pago: {formatBRL(pkg.price_paid)}</p></div><div><div className="mb-1 flex justify-between text-xs font-bold"><span>Usos</span><span className="text-teal-600">{pkg.used_uses} de {pkg.total_uses} ({remaining} restantes)</span></div><div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full bg-teal-600" style={{width:`${pkg.total_uses?(pkg.used_uses/pkg.total_uses)*100:0}%`}}/></div></div></article>})}</div>
+  {open&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"><form onSubmit={submit} className="grid w-full max-w-xl gap-4 rounded-2xl bg-white p-6 md:grid-cols-2 dark:bg-slate-900"><h3 className="text-lg font-bold md:col-span-2">Vender pacote</h3><label className="text-sm font-medium">Tutor<select required className={`${fieldClass} mt-1`} value={customerId} onChange={e=>{setCustomerId(e.target.value);setPetId('')}}><option value="">Selecione</option>{customers.filter(c=>c.is_active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label className="text-sm font-medium">Pet<select required disabled={!customerId} className={`${fieldClass} mt-1`} value={petId} onChange={e=>setPetId(e.target.value)}><option value="">Selecione</option>{customerPets.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label className="text-sm font-medium">Serviço<select required className={`${fieldClass} mt-1`} value={serviceId} onChange={e=>setServiceId(e.target.value)}><option value="">Selecione</option>{services.filter(s=>s.is_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label className="text-sm font-medium">Nome<input required className={`${fieldClass} mt-1`} value={name} onChange={e=>setName(e.target.value)}/></label><label className="text-sm font-medium">Quantidade de usos<input required min={1} type="number" className={`${fieldClass} mt-1`} value={uses} onChange={e=>setUses(Number(e.target.value))}/></label><label className="text-sm font-medium">Validade em dias<input required min={1} type="number" className={`${fieldClass} mt-1`} value={days} onChange={e=>setDays(Number(e.target.value))}/></label><label className="text-sm font-medium">Valor total<input required min={0.01} step="0.01" type="number" className={`${fieldClass} mt-1`} value={price} onChange={e=>setPrice(Number(e.target.value))}/></label><label className="text-sm font-medium">Pagamento<select className={`${fieldClass} mt-1`} value={payment} onChange={e=>setPayment(e.target.value)}><option value="pix">PIX</option><option value="dinheiro">Dinheiro</option><option value="cartao_debito">Cartão de débito</option><option value="cartao_credito">Cartão de crédito</option></select></label><div className="flex justify-end gap-2 md:col-span-2"><button type="button" onClick={()=>setOpen(false)} className="rounded-xl border px-4 py-2.5 text-sm font-bold">Cancelar</button><button disabled={saving} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{saving?'Salvando...':'Confirmar venda'}</button></div></form></div>}
+ </div>
 };
