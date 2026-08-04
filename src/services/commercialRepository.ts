@@ -58,7 +58,8 @@ export async function loadCommercialData(companyId: string): Promise<CommercialD
 const productRow = (product: Product) => {
   const {
     selling_price, minimum_stock, supplier_name: _supplierName,
-    batch_number: _batchNumber, expiration_date: _expirationDate, ...row
+    batch_number: _batchNumber, expiration_date: _expirationDate,
+    next_batch_number: _nextBatch, next_expiration_date: _nextExpiration, ...row
   } = product;
   return { ...row, sale_price: selling_price, min_stock: minimum_stock };
 };
