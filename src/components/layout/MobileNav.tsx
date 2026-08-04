@@ -33,7 +33,7 @@ export const MobileNav: React.FC = () => {
     { id: 'financial', label: 'Financeiro & Caixa', icon: DollarSign, roles: ['proprietario', 'administrador', 'gerente', 'caixa'] },
     { id: 'employees', label: 'Equipe & Comissões', icon: UserCheck, roles: ['proprietario', 'administrador'] },
     { id: 'delivery', label: 'Busca & Entrega (Táxi)', icon: Truck },
-    { id: 'loyalty', label: 'Fidelidade & Pacotes', icon: HeartHandshake },
+    { id: 'loyalty', label: 'Fidelidade & Pacotes', icon: HeartHandshake, roles: ['proprietario', 'administrador', 'gerente', 'atendente', 'caixa'] },
     { id: 'consent', label: 'Termos & Incidentes', icon: FileText },
     { id: 'reports', label: 'Relatórios Operacionais', icon: BarChart3, roles: ['proprietario', 'administrador', 'gerente'] },
     { id: 'audit', label: 'Logs de Auditoria', icon: ShieldAlert, roles: ['proprietario', 'administrador'] },
