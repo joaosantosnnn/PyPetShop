@@ -62,6 +62,13 @@ export async function loadOperationalData(companyId: string): Promise<Operationa
   };
 }
 
+export async function saveCompany(company: Company) {
+  const { id, created_at: _createdAt, ...changes } = company;
+  const { data, error } = await supabase.from('companies').update(changes).eq('id', id).select().single();
+  fail(error);
+  return data as Company;
+}
+
 export async function insertCustomer(customer: Customer) {
   const { data, error } = await supabase.from('customers').insert(customer).select().single();
   fail(error);
