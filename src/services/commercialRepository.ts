@@ -122,3 +122,4 @@ export async function completeProductSale(input: SaleInput) {
   fail(error);
   return data as { id: string; sale_number: number; subtotal: number; total_amount: number; change_amount: number; created_at: string };
 }
+export async function returnProductSale(saleId:string,reason:string){const{data,error}=await supabase.rpc('return_product_sale',{p_sale_id:saleId,p_reason:reason});fail(error);return data as{sale_number:number;credit_amount:number;refund_amount:number;status:string}}
