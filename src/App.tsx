@@ -45,7 +45,9 @@ const MainLayout: React.FC = () => {
         return <ComandasView />;
       case 'pos':
         return <POSView />;
-      case 'inventory':
+      case 'products':
+      case 'stock':
+      case 'suppliers':
         return <InventoryView />;
       case 'financial':
         return <FinancialView />;
