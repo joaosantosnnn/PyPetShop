@@ -23,6 +23,7 @@ import { DeliveryView } from './components/delivery/DeliveryView';
 import { LoyaltyView } from './components/loyalty/LoyaltyView';
 import { TermsView } from './components/terms/TermsView';
 import { ReportsView } from './components/reports/ReportsView';
+import { SettingsView } from './components/settings/SettingsView';
 
 const MainLayout: React.FC = () => {
   const { currentView } = usePetGestor();
@@ -39,7 +40,7 @@ const MainLayout: React.FC = () => {
         return <ServicesView />;
       case 'appointments':
         return <AppointmentsView />;
-      case 'kanban':
+      case 'operation':
         return <KanbanBoard />;
       case 'comandas':
         return <ComandasView />;
@@ -61,6 +62,8 @@ const MainLayout: React.FC = () => {
         return <TermsView />;
       case 'reports':
         return <ReportsView />;
+      case 'settings':
+        return <SettingsView />;
       default:
         return <DashboardView />;
     }
