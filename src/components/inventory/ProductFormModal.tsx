@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Product } from '../../types';
 import { X, Package, DollarSign, Barcode, AlertTriangle } from 'lucide-react';
 
@@ -15,8 +15,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!isOpen) return null;
-
   const [name, setName] = useState(product?.name || '');
   const [barcode, setBarcode] = useState(product?.barcode || '');
   const [category, setCategory] = useState(product?.category || 'Alimentação');
@@ -26,6 +24,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [currentStock, setCurrentStock] = useState(product?.current_stock || 10);
   const [minimumStock, setMinimumStock] = useState(product?.minimum_stock || 3);
   const [supplierName, setSupplierName] = useState(product?.supplier_name || '');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(product?.name || '');
+    setBarcode(product?.barcode || '');
+    setCategory(product?.category || 'Alimentação');
+    setUnit(product?.unit || 'UN');
+    setCostPrice(product?.cost_price || 0);
+    setSellingPrice(product?.selling_price || 0);
+    setCurrentStock(product?.current_stock || 0);
+    setMinimumStock(product?.minimum_stock || 0);
+    setSupplierName(product?.supplier_name || '');
+  }, [isOpen, product]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
