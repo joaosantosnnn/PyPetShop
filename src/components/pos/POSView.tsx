@@ -26,14 +26,17 @@ export const POSView: React.FC = () => {
   }[]>([]);
 
   const [discount, setDiscount] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'fiado' | 'saldo_credito'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito'>('pix');
   const [creditBalance, setCreditBalance] = useState(0);
+  const [useCredit, setUseCredit] = useState(false);
+  const [creditAmount, setCreditAmount] = useState(0);
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<any | null>(null);
   const [isFinalizing, setIsFinalizing] = useState(false);
 
   useEffect(() => {
-    if (!selectedCustomerId) { setCreditBalance(0); if (paymentMethod === 'saldo_credito') setPaymentMethod('pix'); return; }
+    setUseCredit(false); setCreditAmount(0);
+    if (!selectedCustomerId) { setCreditBalance(0); return; }
     loadCustomerCreditBalance(selectedCustomerId).then(setCreditBalance).catch(() => setCreditBalance(0));
   }, [selectedCustomerId]);
 
@@ -91,7 +94,9 @@ export const POSView: React.FC = () => {
 
   const subtotal = cartItems.reduce((acc, i) => acc + i.total_price, 0);
   const finalTotal = Math.max(0, subtotal - discount);
-  const changeAmount = paymentMethod === 'dinheiro' ? Math.max(0, amountPaid - finalTotal) : 0;
+  const appliedCredit = useCredit ? Math.min(Math.max(creditAmount, 0), creditBalance, finalTotal) : 0;
+  const complementaryAmount = Math.max(0, finalTotal - appliedCredit);
+  const changeAmount = paymentMethod === 'dinheiro' ? Math.max(0, amountPaid - complementaryAmount) : 0;
 
   const handleFinalizeSale = async () => {
     if (cartItems.length === 0) return;
@@ -113,7 +118,8 @@ export const POSView: React.FC = () => {
       discount,
       total_amount: finalTotal,
       payment_method: paymentMethod,
-      amount_paid: paymentMethod === 'dinheiro' ? amountPaid : finalTotal,
+      amount_paid: paymentMethod === 'dinheiro' ? amountPaid : complementaryAmount,
+      credit_amount: appliedCredit,
       change_amount: changeAmount,
     };
 
@@ -124,6 +130,8 @@ export const POSView: React.FC = () => {
       setCartItems([]);
       setDiscount(0);
       setAmountPaid(0);
+      setUseCredit(false);
+      setCreditAmount(0);
       if (selectedCustomerId) setCreditBalance(await loadCustomerCreditBalance(selectedCustomerId));
     } finally {
       setIsFinalizing(false);
@@ -293,7 +301,6 @@ export const POSView: React.FC = () => {
                   { id: 'cartao_debito', label: 'Débito', icon: CreditCard },
                   { id: 'cartao_credito', label: 'Crédito', icon: CreditCard },
                   { id: 'dinheiro', label: 'Dinheiro', icon: DollarSign },
-                  { id: 'saldo_credito', label: 'Saldo de crédito', icon: CheckCircle2 },
                 ].map(m => (
                   <button
                     key={m.id}
@@ -311,18 +318,22 @@ export const POSView: React.FC = () => {
             </div>
 
             {selectedCustomerId && (
-              <div className="flex items-center justify-between rounded-xl bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-emerald-800 dark:text-emerald-200">
-                <span>Crédito disponível</span><strong>{formatBRL(creditBalance)}</strong>
+              <div className="space-y-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-emerald-800 dark:text-emerald-200">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span><input type="checkbox" checked={useCredit} disabled={creditBalance<=0} onChange={e=>{setUseCredit(e.target.checked);setCreditAmount(e.target.checked?Math.min(creditBalance,finalTotal):0)}} className="mr-2" />Usar saldo de crédito</span>
+                  <strong>{formatBRL(creditBalance)}</strong>
+                </label>
+                {useCredit && <input type="number" min="0.01" step="0.01" max={Math.min(creditBalance,finalTotal)} value={creditAmount}
+                  onChange={e=>setCreditAmount(Number(e.target.value))} className="w-full px-2 py-1 rounded-lg border text-slate-900 font-bold" />}
               </div>
             )}
-            {paymentMethod === 'saldo_credito' && creditBalance < finalTotal && (
-              <p className="text-rose-600 font-semibold">O saldo não é suficiente para quitar esta venda.</p>
-            )}
+
+            {useCredit && <div className="flex justify-between font-semibold"><span>Restante na outra forma</span><span>{formatBRL(complementaryAmount)}</span></div>}
 
             {paymentMethod === 'dinheiro' && (
               <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
                 <div>
-                  <label className="block text-[10px] text-slate-500">Valor Entregue</label>
+                  <label className="block text-[10px] text-slate-500">Valor entregue para o restante</label>
                   <input
                     type="number"
                     value={amountPaid}
@@ -338,7 +349,7 @@ export const POSView: React.FC = () => {
             )}
 
             <button
-              disabled={cartItems.length === 0 || isFinalizing || (paymentMethod === 'saldo_credito' && (!selectedCustomerId || creditBalance < finalTotal))}
+              disabled={cartItems.length === 0 || isFinalizing || (useCredit && (!selectedCustomerId || creditAmount<=0 || creditAmount>creditBalance || creditAmount>finalTotal)) || (paymentMethod==='dinheiro' && complementaryAmount>0 && amountPaid<complementaryAmount)}
               onClick={handleFinalizeSale}
               className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm shadow-md transition"
             >
@@ -361,6 +372,8 @@ export const POSView: React.FC = () => {
             <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
               <p><span className="font-semibold">Cliente:</span> {lastSaleReceipt.customer_name}</p>
               <p><span className="font-semibold">Pagamento:</span> {lastSaleReceipt.payment_method.toUpperCase()}</p>
+              {lastSaleReceipt.credit_amount>0 && <p><span className="font-semibold">Saldo de crédito:</span> {formatBRL(lastSaleReceipt.credit_amount)}</p>}
+              {lastSaleReceipt.credit_amount>0 && lastSaleReceipt.complement_amount>0 && <p><span className="font-semibold">Complemento ({lastSaleReceipt.payment_method.toUpperCase()}):</span> {formatBRL(lastSaleReceipt.complement_amount)}</p>}
               <p><span className="font-semibold">Total Pago:</span> <strong className="text-emerald-600">{formatBRL(lastSaleReceipt.total_amount)}</strong></p>
             </div>
 
