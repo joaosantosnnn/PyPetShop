@@ -432,25 +432,41 @@ export interface StampCard {
 
 export interface LiabilityTerm {
   id: string;
+  company_id: string;
   title: string;
-  type: string;
+  term_type: string;
   content: string;
+  version: number;
+  is_required: boolean;
   is_active: boolean;
+  valid_days?: number;
+  created_by: string;
+  created_at?: string;
 }
 
 export type ConsentTerm = LiabilityTerm;
 
 export interface PetIncident {
   id: string;
+  company_id: string;
+  appointment_id?: string;
+  checkin_id?: string;
   pet_id: string;
-  pet_name: string;
   customer_id: string;
-  type: 'no_severo' | 'lesao_preexistente' | 'comportamento_agressivo' | 'vermelhidao_pos_tosa';
+  incident_type: string;
+  severity: 'leve' | 'moderado' | 'grave' | 'critico';
   description: string;
   actions_taken?: string;
-  notified_tutor: boolean;
-  logged_at: string;
+  photo_urls: string[];
+  tutor_notified: boolean;
+  tutor_notified_at?: string;
+  occurred_at: string;
+  created_by: string;
+  created_at?: string;
 }
+
+export interface TermAcceptance { id:string;company_id:string;term_id:string;customer_id:string;pet_id?:string;appointment_id?:string;term_title:string;term_content:string;term_version:number;accepted_by_name:string;accepted_at:string;expires_at?:string;created_by:string;created_at?:string; }
+export interface PetCheckin { id:string;company_id:string;appointment_id?:string;customer_id:string;pet_id:string;responsible_name:string;weight?:number;pre_existing_conditions?:string;belongings?:string;observations?:string;photo_urls:string[];status:'entrada'|'em_atendimento'|'finalizado'|'entregue';checked_in_at:string;checked_out_at?:string;created_by:string;created_at?:string;updated_at?:string; }
 
 export interface AuditLog {
   id: number;
