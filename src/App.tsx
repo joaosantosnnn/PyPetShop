@@ -17,6 +17,7 @@ import { KanbanBoard } from './components/operation/KanbanBoard';
 import { ComandasView } from './components/comandas/ComandasView';
 import { POSView } from './components/pos/POSView';
 import { InventoryView } from './components/inventory/InventoryView';
+import { StockManagementView } from './components/inventory/StockManagementView';
 import { FinancialView } from './components/financial/FinancialView';
 import { EmployeesView } from './components/employees/EmployeesView';
 import { DeliveryView } from './components/delivery/DeliveryView';
@@ -51,9 +52,10 @@ const MainLayout: React.FC = () => {
       case 'pos':
         return <POSView />;
       case 'products':
-      case 'stock':
       case 'suppliers':
         return <InventoryView />;
+      case 'stock':
+        return <StockManagementView />;
       case 'purchases':
         return <PurchasesView />;
       case 'financial':
