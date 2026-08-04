@@ -1,7 +1,7 @@
 import { 
   Company, UserProfile, Customer, Pet, Service, 
   Appointment, Product, ServiceOrder, Sale, FinancialTransaction, 
-  LiabilityTerm, LoyaltyPackage, PetIncident, CashRegister, Supplier, DeliveryRequest, AuditLog
+  LiabilityTerm, LoyaltyPackage, PetIncident, CashRegister, Supplier, DeliveryRequest
 } from '../types';
 
 export const initialCompany: Company = {
@@ -576,17 +576,5 @@ export const initialDeliveryRequests: DeliveryRequest[] = [
     scheduled_time: '14:00',
     delivery_fee: 25.00,
     status: 'em_trânsito',
-  }
-];
-
-export const initialAuditLogs: AuditLog[] = [
-  {
-    id: 'log-1',
-    company_id: 'comp-1',
-    user_name: 'Carlos Eduardo',
-    action: 'Login',
-    entity_type: 'Sistema',
-    details: 'Acesso ao sistema efetuado com sucesso',
-    created_at: new Date().toISOString(),
   }
 ];
