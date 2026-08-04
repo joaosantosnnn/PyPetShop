@@ -50,7 +50,8 @@ export type AppView =
   | 'reports'
   | 'audit'
   | 'availability'
-  | 'settings';
+  | 'settings'
+  | 'data-management';
 
 export interface Toast {
   id: string;
