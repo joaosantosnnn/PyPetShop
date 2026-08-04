@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Scissors, ClipboardList, 
   ShoppingCart, Users, Dog, Sparkles, Package, 
   Truck, DollarSign, UserCheck, HeartHandshake, 
-  FileText, BarChart3, ShieldAlert, Settings, CalendarOff, MessageCircle
+  FileText, BarChart3, ShieldAlert, Settings, CalendarOff, MessageCircle, DatabaseBackup
 } from 'lucide-react';
 
 interface NavItem {
@@ -45,6 +45,7 @@ export const Sidebar: React.FC = () => {
     { id: 'audit', label: 'Auditoria', icon: ShieldAlert, roles: ['proprietario', 'administrador'] },
     { id: 'availability', label: 'Bloqueios da Agenda', icon: CalendarOff, roles: ['proprietario', 'administrador', 'gerente', 'atendente'] },
     { id: 'settings', label: 'Configurações', icon: Settings, roles: ['proprietario', 'administrador'] },
+    { id: 'data-management', label: 'Backup & Dados', icon: DatabaseBackup, roles: ['proprietario', 'administrador'] },
   ];
 
   return (
