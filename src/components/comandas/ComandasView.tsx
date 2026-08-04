@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePetGestor } from '../../context/AppContext';
 import { ServiceOrder } from '../../types';
 import { formatBRL, formatDate } from '../../utils/formatters';
@@ -6,6 +6,7 @@ import {
   ClipboardList, Plus, Search, CheckCircle, 
   XCircle, Printer, Image, DollarSign, Tag, Dog, User, Trash2
 } from 'lucide-react';
+import { loadCustomerCreditBalance } from '../../services/refundRepository';
 
 export const ComandasView: React.FC = () => {
   const { 
@@ -15,11 +16,24 @@ export const ComandasView: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSO, setSelectedSO] = useState<ServiceOrder | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'credito' | 'debito'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'saldo_credito'>('pix');
   const [itemOrder, setItemOrder] = useState<ServiceOrder | null>(null);
   const [itemType, setItemType] = useState<'service' | 'product' | 'internal_consumption'>('product');
   const [itemId, setItemId] = useState('');
   const [itemQuantity, setItemQuantity] = useState(1);
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+
+  useEffect(() => {
+    if (!selectedSO) { setCreditBalance(0); return; }
+    const remaining=selectedSO.total-selectedSO.paid_amount;
+    setPaymentAmount(remaining);
+    loadCustomerCreditBalance(selectedSO.customer_id).then(balance=>{setCreditBalance(balance);}).catch(()=>setCreditBalance(0));
+  }, [selectedSO]);
+
+  useEffect(() => {
+    if (selectedSO && paymentMethod==='saldo_credito') setPaymentAmount(Math.min(creditBalance,selectedSO.total-selectedSO.paid_amount));
+  }, [paymentMethod,creditBalance,selectedSO]);
 
   const filteredOrders = serviceOrders.filter(so => {
     const term = searchTerm.toLowerCase();
@@ -194,7 +208,18 @@ export const ComandasView: React.FC = () => {
                 <option value="cartao_debito">Cartão de Débito</option>
                 <option value="cartao_credito">Cartão de Crédito</option>
                 <option value="dinheiro">Dinheiro em Espécie</option>
+                <option value="saldo_credito">Saldo de crédito do cliente</option>
               </select>
+            </div>
+
+            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-xs flex justify-between text-emerald-800 dark:text-emerald-200">
+              <span>Crédito disponível</span><strong>{formatBRL(creditBalance)}</strong>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Valor deste pagamento</label>
+              <input type="number" min="0.01" step="0.01" max={selectedSO.total-selectedSO.paid_amount} value={paymentAmount}
+                onChange={e=>setPaymentAmount(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl border text-xs font-bold" />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -205,8 +230,9 @@ export const ComandasView: React.FC = () => {
                 Cancelar
               </button>
               <button
-                onClick={async () => { try { await finalizeServiceOrder(selectedSO.id, paymentMethod, selectedSO.total - selectedSO.paid_amount); setSelectedSO(null); } catch {} }}
-                className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md"
+                disabled={paymentAmount<=0 || paymentAmount>selectedSO.total-selectedSO.paid_amount || (paymentMethod==='saldo_credito' && paymentAmount>creditBalance)}
+                onClick={async () => { try { await finalizeServiceOrder(selectedSO.id, paymentMethod, paymentAmount); setSelectedSO(null); } catch {} }}
+                className="px-5 py-2 bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md"
               >
                 Confirmar Recebimento
               </button>
