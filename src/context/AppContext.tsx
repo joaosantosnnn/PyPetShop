@@ -23,6 +23,7 @@ import {
 import {
   addOrderItem, insertFinancialTransaction, loadServiceOrders, openServiceOrder, payServiceOrder,
 } from '../services/serviceOrderRepository';
+import { closeCash, loadOpenCash, moveCash, openCash } from '../services/cashRepository';
 
 export type AppView = 
   | 'dashboard'
@@ -120,7 +121,9 @@ interface AppContextType {
   addFinancialTransaction: (transaction: Omit<FinancialTransaction, 'id' | 'company_id' | 'created_at'>) => void;
   updateTransactionStatus: (id: string, status: 'pago' | 'pendente' | 'cancelado', paymentDate?: string) => void;
   updateCashRegister: (data: Partial<CashRegister>) => void;
-  registerCashMovement: (type: 'sangria' | 'suprimento', amount: number, description: string) => void;
+  openCashRegister: (initialCash: number) => Promise<void>;
+  closeCashRegister: (actualCash: number) => Promise<CashRegister>;
+  registerCashMovement: (type: 'sangria' | 'suprimento', amount: number, description: string) => Promise<void>;
   
   // Actions - Suppliers & Delivery
   addSupplier: (supplier: Omit<Supplier, 'id' | 'company_id'>) => void;
@@ -213,7 +216,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadOperationalData(currentProfile.company_id),
       loadCommercialData(currentProfile.company_id),
       loadServiceOrders(currentProfile.company_id),
-    ]).then(([data, commercial, orders]) => {
+      loadOpenCash(currentProfile.company_id),
+    ]).then(([data, commercial, orders, openRegister]) => {
         if (!active) return;
         setCompany(data.company);
         setCustomers(data.customers);
@@ -227,6 +231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSuppliers(commercial.suppliers);
         setServiceOrders(orders.orders);
         setFinancialTransactions(orders.financialTransactions);
+        setCashRegister(openRegister || { ...initialCashRegister, status: 'fechado' });
       })
       .catch(() => {
         if (active) addToast('Não foi possível carregar os dados do PetShop.', 'error');
@@ -708,7 +713,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Caixa atualizado!', 'info');
   };
 
-  const registerCashMovement = (type: 'sangria' | 'suprimento', amount: number, description: string) => {
+  const openCashRegister = async (initialCash: number) => {
+    const opened = await openCash(initialCash);
+    setCashRegister(opened);
+    addToast('Caixa aberto com sucesso!', 'success');
+  };
+
+  const closeCashRegister = async (actualCash: number) => {
+    const closed = await closeCash(actualCash);
+    setCashRegister(closed);
+    addToast(`Caixa fechado. Diferença: ${formatBRL(closed.difference || 0)}`, closed.difference === 0 ? 'success' : 'warning');
+    return closed;
+  };
+
+  const registerCashMovement = async (type: 'sangria' | 'suprimento', amount: number, description: string) => {
+    await moveCash(type, amount, description);
     if (type === 'sangria') {
       setCashRegister(prev => ({
         ...prev,
@@ -740,6 +759,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       addToast(`Suprimento de ${formatBRL(amount)} adicionado!`, 'success');
     }
+    const opened = await loadOpenCash(company.id);
+    if (opened) setCashRegister(opened);
   };
 
   // Suppliers & Delivery
@@ -788,7 +809,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addServiceOrder, addServiceOrderItem, updateServiceOrder, finalizeServiceOrder,
       addProduct, updateProduct, addStockMovement, adjustStock,
       completeSale, recordSale, cancelSale,
-      addFinancialTransaction, updateTransactionStatus, updateCashRegister, registerCashMovement,
+      addFinancialTransaction, updateTransactionStatus, updateCashRegister, openCashRegister, closeCashRegister, registerCashMovement,
       addSupplier, addDeliveryRequest, updateDeliveryStatus,
       toasts, addToast, removeToast, logAudit
     }}>
