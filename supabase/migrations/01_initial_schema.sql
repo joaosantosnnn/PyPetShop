@@ -1,284 +1,396 @@
--- PetGestor Initial Schema & Security Rules
--- Compatible with Supabase PostgreSQL & RLS
+-- PetGestor: fundação segura para Supabase PostgreSQL 17
+-- Bloco 2: limpeza do projeto anterior, autenticação, multiempresa e RLS.
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+begin;
 
--- 1. COMPANIES
-CREATE TABLE IF NOT EXISTS public.companies (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    trade_name VARCHAR(255),
-    cnpj VARCHAR(20),
-    phone VARCHAR(30),
-    whatsapp VARCHAR(30),
-    email VARCHAR(255),
-    postal_code VARCHAR(10),
-    street VARCHAR(255),
-    number VARCHAR(20),
-    complement VARCHAR(100),
-    neighborhood VARCHAR(100),
-    city VARCHAR(100),
-    state VARCHAR(2),
-    logo_url TEXT,
-    opening_time TIME DEFAULT '08:00',
-    closing_time TIME DEFAULT '18:00',
-    slot_interval_minutes INT DEFAULT 30,
-    capacity_per_slot INT DEFAULT 3,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- Estruturas do projeto anterior, removidas com autorização do proprietário.
+drop table if exists public.permissoes cascade;
+drop table if exists public.membros cascade;
+drop table if exists public.visitantes cascade;
+drop table if exists public.usuarios cascade;
+
+create extension if not exists pgcrypto;
+create schema if not exists private;
+revoke all on schema private from public, anon;
+grant usage on schema private to authenticated;
+
+create table public.companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(trim(name)) between 2 and 160),
+  trade_name text,
+  cnpj text,
+  phone text,
+  whatsapp text,
+  email text,
+  postal_code text,
+  street text,
+  number text,
+  complement text,
+  neighborhood text,
+  city text,
+  state text check (state is null or char_length(state) = 2),
+  logo_url text,
+  opening_time time not null default '08:00',
+  closing_time time not null default '18:00',
+  slot_interval_minutes integer not null default 30 check (slot_interval_minutes between 5 and 240),
+  capacity_per_slot integer not null default 3 check (capacity_per_slot between 1 and 100),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- 2. PROFILES & ROLES
-CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE,
-    full_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    phone VARCHAR(30),
-    role VARCHAR(50) NOT NULL DEFAULT 'atendente', -- proprietario, administrador, gerente, atendente, caixa, banhista, tosador, estoquista
-    is_active BOOLEAN DEFAULT TRUE,
-    commission_rate NUMERIC(5, 2) DEFAULT 0.00,
-    last_access_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create table public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  company_id uuid references public.companies(id) on delete restrict,
+  full_name text not null default 'Novo usuário',
+  email text not null,
+  phone text,
+  role text not null default 'atendente' check (role in (
+    'proprietario', 'administrador', 'gerente', 'atendente',
+    'caixa', 'banhista', 'tosador', 'estoquista'
+  )),
+  is_active boolean not null default false,
+  commission_rate numeric(5,2) not null default 0 check (commission_rate between 0 and 100),
+  last_access_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (company_id, email)
 );
 
--- 3. CUSTOMERS (Tutores)
-CREATE TABLE IF NOT EXISTS public.customers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    cpf VARCHAR(14),
-    phone VARCHAR(30),
-    whatsapp VARCHAR(30),
-    email VARCHAR(255),
-    birth_date DATE,
-    postal_code VARCHAR(10),
-    address VARCHAR(255),
-    number VARCHAR(20),
-    complement VARCHAR(100),
-    neighborhood VARCHAR(100),
-    city VARCHAR(100),
-    state VARCHAR(2),
-    notes TEXT,
-    contact_preference VARCHAR(50) DEFAULT 'whatsapp',
-    communication_consent BOOLEAN DEFAULT TRUE,
-    is_active BOOLEAN DEFAULT TRUE,
-    total_spent NUMERIC(10, 2) DEFAULT 0.00,
-    outstanding_balance NUMERIC(10, 2) DEFAULT 0.00,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create index profiles_company_id_idx on public.profiles(company_id);
+
+create table public.customers (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete restrict,
+  name text not null check (char_length(trim(name)) between 2 and 160),
+  cpf text,
+  phone text,
+  whatsapp text,
+  email text,
+  birth_date date,
+  postal_code text,
+  address text,
+  number text,
+  complement text,
+  neighborhood text,
+  city text,
+  state text check (state is null or char_length(state) = 2),
+  notes text,
+  contact_preference text not null default 'whatsapp' check (contact_preference in ('whatsapp','telefone','email')),
+  communication_consent boolean not null default false,
+  is_active boolean not null default true,
+  total_spent numeric(12,2) not null default 0 check (total_spent >= 0),
+  outstanding_balance numeric(12,2) not null default 0 check (outstanding_balance >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- 4. PETS
-CREATE TABLE IF NOT EXISTS public.pets (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    photo_url TEXT,
-    species VARCHAR(50) NOT NULL, -- cao, gato, ave, roedor, outro
-    breed VARCHAR(100),
-    gender VARCHAR(10), -- macho, femea
-    birth_date DATE,
-    approximate_age VARCHAR(50),
-    weight NUMERIC(6, 2),
-    size_category VARCHAR(20) DEFAULT 'medio', -- pequeno, medio, grande, gigante
-    color VARCHAR(50),
-    is_neutered BOOLEAN DEFAULT FALSE,
-    allergies TEXT,
-    diseases TEXT,
-    medications TEXT,
-    restrictions TEXT,
-    temperament VARCHAR(50) DEFAULT 'calmo', -- dócil, calmo, agitado, medroso, agressivo
-    aggression_level INT DEFAULT 1, -- 1 to 5
-    special_cares TEXT,
-    vet_name VARCHAR(255),
-    vet_phone VARCHAR(30),
-    notes TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    last_visit_at TIMESTAMP WITH TIME ZONE,
-    next_suggested_visit DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create index customers_company_id_idx on public.customers(company_id);
+create index customers_company_name_idx on public.customers(company_id, lower(name));
+create unique index customers_company_cpf_uidx on public.customers(company_id, cpf) where cpf is not null and cpf <> '';
+
+create table public.pets (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete restrict,
+  customer_id uuid not null references public.customers(id) on delete restrict,
+  name text not null check (char_length(trim(name)) between 1 and 120),
+  photo_url text,
+  species text not null check (species in ('cao','gato','ave','roedor','outro')),
+  breed text,
+  gender text check (gender is null or gender in ('macho','femea')),
+  birth_date date,
+  approximate_age text,
+  weight numeric(7,2) check (weight is null or weight >= 0),
+  size_category text not null default 'medio' check (size_category in ('pequeno','medio','grande','gigante')),
+  color text,
+  is_neutered boolean not null default false,
+  allergies text,
+  diseases text,
+  medications text,
+  restrictions text,
+  temperament text not null default 'calmo' check (temperament in ('docil','calmo','agitado','medroso','agressivo')),
+  aggression_level integer not null default 1 check (aggression_level between 1 and 5),
+  special_cares text,
+  vet_name text,
+  vet_phone text,
+  notes text,
+  is_active boolean not null default true,
+  last_visit_at timestamptz,
+  next_suggested_visit date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- 5. SERVICES
-CREATE TABLE IF NOT EXISTS public.services (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    category VARCHAR(100) DEFAULT 'Banho e Tosa',
-    estimated_duration_minutes INT DEFAULT 45,
-    base_price NUMERIC(10, 2) NOT NULL,
-    price_small NUMERIC(10, 2),
-    price_medium NUMERIC(10, 2),
-    price_large NUMERIC(10, 2),
-    commission_percentage NUMERIC(5, 2) DEFAULT 0.00,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create index pets_company_id_idx on public.pets(company_id);
+create index pets_customer_id_idx on public.pets(customer_id);
+create index pets_company_name_idx on public.pets(company_id, lower(name));
+
+create table public.services (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete restrict,
+  name text not null,
+  description text,
+  category text not null default 'Banho e Tosa',
+  estimated_duration_minutes integer not null default 45 check (estimated_duration_minutes between 5 and 1440),
+  base_price numeric(12,2) not null check (base_price >= 0),
+  price_small numeric(12,2) check (price_small is null or price_small >= 0),
+  price_medium numeric(12,2) check (price_medium is null or price_medium >= 0),
+  price_large numeric(12,2) check (price_large is null or price_large >= 0),
+  commission_percentage numeric(5,2) not null default 0 check (commission_percentage between 0 and 100),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (company_id, name)
 );
 
--- 6. APPOINTMENTS
-CREATE TABLE IF NOT EXISTS public.appointments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
-    pet_id UUID NOT NULL REFERENCES public.pets(id) ON DELETE CASCADE,
-    service_id UUID NOT NULL REFERENCES public.services(id) ON DELETE CASCADE,
-    employee_id UUID REFERENCES public.profiles(id),
-    scheduled_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    estimated_duration_minutes INT DEFAULT 45,
-    expected_price NUMERIC(10, 2) NOT NULL,
-    status VARCHAR(50) DEFAULT 'agendado', -- pendente, agendado, confirmado, recebido, aguardando, em_banho, em_secagem, em_tosa, finalizando, pronto, entregue, cancelado, faltou
-    needs_pickup_delivery BOOLEAN DEFAULT FALSE,
-    pickup_address TEXT,
-    cancellation_reason TEXT,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create index services_company_id_idx on public.services(company_id);
+
+create table public.appointments (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete restrict,
+  customer_id uuid not null references public.customers(id) on delete restrict,
+  pet_id uuid not null references public.pets(id) on delete restrict,
+  service_id uuid not null references public.services(id) on delete restrict,
+  employee_id uuid references public.profiles(id) on delete set null,
+  scheduled_at timestamptz not null,
+  estimated_duration_minutes integer not null default 45 check (estimated_duration_minutes between 5 and 1440),
+  expected_price numeric(12,2) not null check (expected_price >= 0),
+  status text not null default 'agendado' check (status in (
+    'pendente','agendado','confirmado','recebido','aguardando','em_banho',
+    'em_secagem','em_tosa','finalizando','pronto','entregue','cancelado','faltou'
+  )),
+  needs_pickup_delivery boolean not null default false,
+  pickup_address text,
+  cancellation_reason text,
+  notes text,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- 7. SERVICE ORDERS (Comandas)
-CREATE TABLE IF NOT EXISTS public.service_orders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_number SERIAL,
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    appointment_id UUID REFERENCES public.appointments(id),
-    customer_id UUID NOT NULL REFERENCES public.customers(id),
-    pet_id UUID NOT NULL REFERENCES public.pets(id),
-    status VARCHAR(50) DEFAULT 'aberta', -- aberta, em_atendimento, aguardando_pagamento, paga, parcialmente_paga, cancelada
-    photo_before_url TEXT,
-    photo_after_url TEXT,
-    tutor_signature_accepted BOOLEAN DEFAULT FALSE,
-    subtotal NUMERIC(10, 2) DEFAULT 0.00,
-    discount NUMERIC(10, 2) DEFAULT 0.00,
-    total NUMERIC(10, 2) DEFAULT 0.00,
-    paid_amount NUMERIC(10, 2) DEFAULT 0.00,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create index appointments_company_schedule_idx on public.appointments(company_id, scheduled_at);
+create index appointments_employee_schedule_idx on public.appointments(employee_id, scheduled_at);
+create index appointments_customer_id_idx on public.appointments(customer_id);
+create index appointments_pet_id_idx on public.appointments(pet_id);
+create index appointments_service_id_idx on public.appointments(service_id);
+
+create table public.appointment_status_history (
+  id bigint generated always as identity primary key,
+  company_id uuid not null references public.companies(id) on delete restrict,
+  appointment_id uuid not null references public.appointments(id) on delete cascade,
+  previous_status text,
+  new_status text not null,
+  reason text,
+  changed_by uuid references public.profiles(id) on delete set null,
+  changed_at timestamptz not null default now()
 );
 
--- 8. PRODUCTS
-CREATE TABLE IF NOT EXISTS public.products (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    category VARCHAR(100) NOT NULL DEFAULT 'Geral',
-    brand VARCHAR(100),
-    internal_code VARCHAR(50),
-    barcode VARCHAR(100),
-    unit VARCHAR(20) DEFAULT 'un', -- un, kg, g, ml, l
-    sell_by_weight BOOLEAN DEFAULT FALSE,
-    cost_price NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    sale_price NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    profit_margin_percent NUMERIC(5, 2) DEFAULT 0.00,
-    current_stock NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    min_stock NUMERIC(10, 2) DEFAULT 5.00,
-    max_stock NUMERIC(10, 2) DEFAULT 100.00,
-    location_in_store VARCHAR(100),
-    photo_url TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+create index appointment_status_history_company_idx on public.appointment_status_history(company_id);
+create index appointment_status_history_appointment_idx on public.appointment_status_history(appointment_id, changed_at);
 
--- 9. STOCK MOVEMENTS
-CREATE TABLE IF NOT EXISTS public.stock_movements (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
-    movement_type VARCHAR(50) NOT NULL, -- compra, entrada_manual, venda, consumo_servico, devolucao, perda, avaria, vencimento, ajuste_positivo, ajuste_negativo, inventario
-    quantity NUMERIC(10, 2) NOT NULL,
-    unit_cost NUMERIC(10, 2) DEFAULT 0.00,
-    batch_number VARCHAR(100),
-    expiration_date DATE,
-    reason TEXT,
-    previous_stock NUMERIC(10, 2) NOT NULL,
-    new_stock NUMERIC(10, 2) NOT NULL,
-    created_by UUID REFERENCES public.profiles(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Helpers privados: sempre derivam empresa e função do usuário autenticado.
+create or replace function private.current_company_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.company_id
+  from public.profiles p
+  where p.id = (select auth.uid()) and p.is_active
+$$;
 
--- 10. SALES & SALE ITEMS
-CREATE TABLE IF NOT EXISTS public.sales (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    sale_number SERIAL,
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    customer_id UUID REFERENCES public.customers(id),
-    seller_id UUID REFERENCES public.profiles(id),
-    subtotal NUMERIC(10, 2) NOT NULL,
-    discount NUMERIC(10, 2) DEFAULT 0.00,
-    total NUMERIC(10, 2) NOT NULL,
-    payment_method VARCHAR(50) NOT NULL, -- dinheiro, pix, debito, credito, fiado, credito_cliente, misto
-    status VARCHAR(50) DEFAULT 'concluida', -- concluida, cancelada, devolvida
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+create or replace function private.current_role()
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.role
+  from public.profiles p
+  where p.id = (select auth.uid()) and p.is_active
+$$;
 
-CREATE TABLE IF NOT EXISTS public.sale_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    sale_id UUID NOT NULL REFERENCES public.sales(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES public.products(id),
-    quantity NUMERIC(10, 2) NOT NULL,
-    unit_price NUMERIC(10, 2) NOT NULL,
-    discount NUMERIC(10, 2) DEFAULT 0.00,
-    total NUMERIC(10, 2) NOT NULL
-);
+create or replace function private.is_company_member(target_company uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.company_id = target_company
+      and p.is_active
+  )
+$$;
 
--- 11. FINANCIAL TRANSACTIONS (Accounts Payable / Receivable / Cash Register)
-CREATE TABLE IF NOT EXISTS public.financial_transactions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    type VARCHAR(20) NOT NULL, -- receita, despesa, sangria, suprimento
-    category VARCHAR(100) NOT NULL,
-    description VARCHAR(255) NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
-    due_date DATE NOT NULL,
-    payment_date DATE,
-    status VARCHAR(30) DEFAULT 'pendente', -- pendente, pago, atrasado, cancelado
-    payment_method VARCHAR(50),
-    customer_id UUID REFERENCES public.customers(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+create or replace function private.has_company_role(target_company uuid, allowed_roles text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.company_id = target_company
+      and p.is_active
+      and p.role = any(allowed_roles)
+  )
+$$;
 
--- 12. AUDIT LOGS
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES public.profiles(id),
-    action VARCHAR(100) NOT NULL,
-    entity_type VARCHAR(100) NOT NULL,
-    entity_id VARCHAR(255),
-    previous_data JSONB,
-    new_data JSONB,
-    reason TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+revoke all on all functions in schema private from public, anon;
+grant execute on function private.current_company_id() to authenticated;
+grant execute on function private.current_role() to authenticated;
+grant execute on function private.is_company_member(uuid) to authenticated;
+grant execute on function private.has_company_role(uuid, text[]) to authenticated;
 
--- RLS POLICIES (Row Level Security)
-ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.service_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.stock_movements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sale_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.financial_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+-- Primeiro cadastro: cria a empresa e o proprietário. Cadastros posteriores aguardam ativação.
+create or replace function private.handle_new_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_company uuid;
+  first_user boolean;
+begin
+  perform pg_advisory_xact_lock(8172401);
+  select not exists (select 1 from public.profiles) into first_user;
 
--- Default Permissive RLS Policies for authenticated company scope
-CREATE POLICY "Allow company members full access" ON public.customers FOR ALL USING (true);
-CREATE POLICY "Allow company members full access" ON public.pets FOR ALL USING (true);
-CREATE POLICY "Allow company members full access" ON public.services FOR ALL USING (true);
-CREATE POLICY "Allow company members full access" ON public.appointments FOR ALL USING (true);
-CREATE POLICY "Allow company members full access" ON public.products FOR ALL USING (true);
-CREATE POLICY "Allow company members full access" ON public.sales FOR ALL USING (true);
-CREATE POLICY "Allow company members full access" ON public.financial_transactions FOR ALL USING (true);
+  if first_user then
+    insert into public.companies(name, trade_name, email)
+    values ('Meu Pet Shop', 'Meu Pet Shop', new.email)
+    returning id into target_company;
+
+    insert into public.profiles(id, company_id, full_name, email, role, is_active)
+    values (
+      new.id,
+      target_company,
+      coalesce(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), split_part(new.email, '@', 1)),
+      new.email,
+      'proprietario',
+      true
+    );
+  else
+    insert into public.profiles(id, company_id, full_name, email, role, is_active)
+    values (
+      new.id,
+      null,
+      coalesce(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), split_part(new.email, '@', 1)),
+      new.email,
+      'atendente',
+      false
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function private.handle_new_auth_user() from public, anon, authenticated;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function private.handle_new_auth_user();
+
+create or replace function private.set_updated_at()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+revoke all on function private.set_updated_at() from public, anon, authenticated;
+
+create trigger companies_updated_at before update on public.companies
+for each row execute function private.set_updated_at();
+create trigger profiles_updated_at before update on public.profiles
+for each row execute function private.set_updated_at();
+create trigger customers_updated_at before update on public.customers
+for each row execute function private.set_updated_at();
+create trigger pets_updated_at before update on public.pets
+for each row execute function private.set_updated_at();
+create trigger services_updated_at before update on public.services
+for each row execute function private.set_updated_at();
+create trigger appointments_updated_at before update on public.appointments
+for each row execute function private.set_updated_at();
+
+alter table public.companies enable row level security;
+alter table public.profiles enable row level security;
+alter table public.customers enable row level security;
+alter table public.pets enable row level security;
+alter table public.services enable row level security;
+alter table public.appointments enable row level security;
+alter table public.appointment_status_history enable row level security;
+
+create policy companies_select on public.companies for select to authenticated
+using (private.is_company_member(id));
+create policy companies_update on public.companies for update to authenticated
+using (private.has_company_role(id, array['proprietario','administrador']))
+with check (private.has_company_role(id, array['proprietario','administrador']));
+
+create policy profiles_select on public.profiles for select to authenticated
+using (id = (select auth.uid()) or private.is_company_member(company_id));
+create policy profiles_update_admin on public.profiles for update to authenticated
+using (private.has_company_role(company_id, array['proprietario','administrador']))
+with check (private.has_company_role(company_id, array['proprietario','administrador']));
+
+create policy customers_select on public.customers for select to authenticated
+using (private.is_company_member(company_id));
+create policy customers_insert on public.customers for insert to authenticated
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','caixa']));
+create policy customers_update on public.customers for update to authenticated
+using (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','caixa']))
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','caixa']));
+
+create policy pets_select on public.pets for select to authenticated
+using (private.is_company_member(company_id));
+create policy pets_insert on public.pets for insert to authenticated
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','banhista','tosador']));
+create policy pets_update on public.pets for update to authenticated
+using (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','banhista','tosador']))
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','banhista','tosador']));
+
+create policy services_select on public.services for select to authenticated
+using (private.is_company_member(company_id));
+create policy services_insert on public.services for insert to authenticated
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente']));
+create policy services_update on public.services for update to authenticated
+using (private.has_company_role(company_id, array['proprietario','administrador','gerente']))
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente']));
+
+create policy appointments_select on public.appointments for select to authenticated
+using (private.is_company_member(company_id));
+create policy appointments_insert on public.appointments for insert to authenticated
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','caixa','banhista','tosador']));
+create policy appointments_update on public.appointments for update to authenticated
+using (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','caixa','banhista','tosador']))
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','caixa','banhista','tosador']));
+
+create policy appointment_history_select on public.appointment_status_history for select to authenticated
+using (private.is_company_member(company_id));
+create policy appointment_history_insert on public.appointment_status_history for insert to authenticated
+with check (private.has_company_role(company_id, array['proprietario','administrador','gerente','atendente','caixa','banhista','tosador']));
+
+revoke all on all tables in schema public from anon;
+grant select, update on public.companies to authenticated;
+grant select, update on public.profiles to authenticated;
+grant select, insert, update on public.customers to authenticated;
+grant select, insert, update on public.pets to authenticated;
+grant select, insert, update on public.services to authenticated;
+grant select, insert, update on public.appointments to authenticated;
+grant select, insert on public.appointment_status_history to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+
+commit;
