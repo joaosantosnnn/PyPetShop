@@ -3,12 +3,12 @@ import {
   Company, UserProfile, Customer, Pet, Service, 
   Appointment, ServiceOrder, Product, StockMovement, 
   Sale, FinancialTransaction, Supplier, CashRegister, 
-  DeliveryRequest, ConsentTerm, AuditLog, AppointmentStatus, ServiceOrderStatus 
+  DeliveryRequest, ConsentTerm, AppointmentStatus, ServiceOrderStatus 
 } from '../types';
 import { 
   initialCompany, initialProfiles,
   initialCashRegister, initialDeliveryRequests,
-  initialConsentTerms, initialAuditLogs 
+  initialConsentTerms
 } from '../data/initialData';
 import { generateId, formatBRL } from '../utils/formatters';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -81,7 +81,6 @@ interface AppContextType {
   suppliers: Supplier[];
   deliveryRequests: DeliveryRequest[];
   consentTerms: ConsentTerm[];
-  auditLogs: AuditLog[];
   
   // Actions - Customers
   addCustomer: (customer: Omit<Customer, 'id' | 'company_id' | 'total_spent' | 'outstanding_balance'>) => Customer;
@@ -193,11 +192,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [consentTerms] = useState<ConsentTerm[]>(initialConsentTerms);
 
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    const saved = localStorage.getItem('petgestor_audit');
-    return saved ? JSON.parse(saved) : initialAuditLogs;
-  });
-
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // LocalStorage Persist Effects
@@ -240,7 +234,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => { active = false; };
   }, [currentProfile.company_id]);
   useEffect(() => { localStorage.setItem('petgestor_cash', JSON.stringify(cashRegister)); }, [cashRegister]);
-  useEffect(() => { localStorage.setItem('petgestor_audit', JSON.stringify(auditLogs)); }, [auditLogs]);
 
   // Theme Toggle
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
@@ -257,18 +250,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Audit Log
-  const logAudit = (action: string, entity_type: string, entity_id?: string, details?: string) => {
-    const newLog: AuditLog = {
-      id: generateId(),
-      company_id: company.id,
-      user_name: currentProfile.full_name,
-      action,
-      entity_type,
-      entity_id,
-      details: details || '',
-      created_at: new Date().toISOString(),
-    };
-    setAuditLogs(prev => [newLog, ...prev]);
+  const logAudit = (action: string, entityType: string, entityId?: string, details?: string) => {
+    void action; void entityType; void entityId; void details;
+    // A auditoria é capturada por triggers no banco, junto da alteração confirmada.
   };
 
   // Company Update
@@ -811,7 +795,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       company, updateCompany,
       customers, pets, services, appointments, serviceOrders,
       products, stockMovements, sales, financialTransactions, cashRegister,
-      suppliers, deliveryRequests, consentTerms, auditLogs,
+      suppliers, deliveryRequests, consentTerms,
       addCustomer, updateCustomer, toggleCustomerActive,
       addPet, updatePet,
       addService, updateService,
