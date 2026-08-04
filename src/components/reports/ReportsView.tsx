@@ -31,7 +31,7 @@ export const ReportsView: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-teal-600" />
-            Relatórios e Inteligência de Negócios
+            Relatórios e Indicadores
           </h2>
           <p className="text-xs text-slate-500">
             Métricas de faturamento, vendas de produtos e serviços prestados
