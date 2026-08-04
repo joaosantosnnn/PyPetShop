@@ -378,7 +378,6 @@ export interface PurchaseOrder {
   company_id: string;
   supplier_id: string;
   supplier_name?: string;
-  supplier_id: string;
   order_number: number;
   status: 'rascunho' | 'enviado' | 'recebido_parcial' | 'recebido' | 'cancelado';
   total_amount: number;
