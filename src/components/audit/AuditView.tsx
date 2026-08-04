@@ -8,7 +8,7 @@ const entityLabels: Record<string, string> = {
   companies: 'PetShop', profiles: 'Funcionários', customers: 'Clientes', pets: 'Pets', services: 'Serviços',
   appointments: 'Agenda', products: 'Produtos', stock_movements: 'Estoque', sales: 'Vendas',
   service_orders: 'Comandas', financial_transactions: 'Financeiro', cash_registers: 'Caixa',
-  cash_movements: 'Movimentações do caixa', employee_invites: 'Convites', blocked_times: 'Bloqueios da agenda', delivery_requests: 'Busca e entrega',
+  cash_movements: 'Movimentações do caixa', employee_invites: 'Convites', blocked_times: 'Bloqueios da agenda', delivery_requests: 'Busca e entrega', service_packages: 'Modelos de pacotes', customer_packages: 'Pacotes de clientes', package_usages: 'Uso de pacotes',
 };
 const actionLabels = { INSERT: 'Criação', UPDATE: 'Alteração', DELETE: 'Exclusão' } as const;
 
