@@ -7,11 +7,12 @@ import {
   XCircle, Printer, Image, DollarSign, Tag, Dog, User, Trash2
 } from 'lucide-react';
 import { loadCustomerCreditBalance } from '../../services/refundRepository';
+import { canPerform } from '../../utils/permissions';
 
 export const ComandasView: React.FC = () => {
   const { 
     serviceOrders, products, services, 
-    addServiceOrderItem, finalizeServiceOrder,
+    addServiceOrderItem, finalizeServiceOrder,currentProfile,
   } = usePetGestor();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -143,12 +144,12 @@ export const ComandasView: React.FC = () => {
                         <button onClick={() => { setItemOrder(so); setItemId(''); }} className="px-3 py-1.5 border border-teal-300 text-teal-700 rounded-xl font-bold text-xs">
                           + Item
                         </button>
-                        <button
+                        {canPerform(currentProfile.role,'receive_payment')&&<button
                           onClick={() => setSelectedSO(so)}
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs"
                         >
                           Receber
-                        </button>
+                        </button>}
                       </>
                     )}
                   </div>
