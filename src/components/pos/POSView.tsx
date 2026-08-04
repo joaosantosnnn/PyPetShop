@@ -9,7 +9,7 @@ import {
 import { loadCustomerCreditBalance } from '../../services/refundRepository';
 
 export const POSView: React.FC = () => {
-  const { products, services, customers, recordSale } = usePetGestor();
+  const { products, services, customers, sales, recordSale, cancelSale } = usePetGestor();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
@@ -152,6 +152,11 @@ export const POSView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+        <div className="p-4 border-b"><h3 className="font-bold text-sm">Vendas recentes e devolucoes</h3><p className="text-[11px] text-slate-500">A devolucao e integral e repoe automaticamente todos os produtos.</p></div>
+        <div className="divide-y text-xs">{sales.slice(0,20).map(sale=><div key={sale.id} className="p-3 flex flex-wrap items-center justify-between gap-2"><span><b>Venda #{sale.sale_number} · {sale.customer_name||'Cliente avulso'}</b><small className="block text-slate-500">{new Date(sale.created_at).toLocaleString('pt-BR')} · {formatBRL(sale.total_amount)}</small></span><div className="flex items-center gap-2"><span className="uppercase text-[10px] font-bold">{sale.status}</span>{sale.status==='concluida'&&<button onClick={async()=>{const reason=prompt('Motivo da devolucao:')||'';if(reason)try{await cancelSale(sale.id,reason)}catch{}}} className="px-3 py-2 border border-rose-300 text-rose-600 rounded-xl font-bold">Devolver venda</button>}</div></div>)}</div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Catalog & Search (7 Cols) */}
