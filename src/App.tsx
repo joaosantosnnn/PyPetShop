@@ -5,6 +5,7 @@ import { Header } from './components/layout/Header';
 import { MobileNav } from './components/layout/MobileNav';
 import { ToastContainer } from './components/common/ToastContainer';
 import { ConfirmationModal } from './components/common/ConfirmationModal';
+import { AuthGate } from './components/auth/AuthGate';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -82,7 +83,9 @@ const MainLayout: React.FC = () => {
 export default function App() {
   return (
     <AppProvider>
-      <MainLayout />
+      <AuthGate>
+        <MainLayout />
+      </AuthGate>
     </AppProvider>
   );
 }
