@@ -29,6 +29,7 @@ import { AvailabilityView } from './components/settings/AvailabilityView';
 import { AuditView } from './components/audit/AuditView';
 import { CommunicationsView } from './components/communications/CommunicationsView';
 import { PurchasesView } from './components/purchases/PurchasesView';
+import { DataManagementView } from './components/settings/DataManagementView';
 
 const MainLayout: React.FC = () => {
   const { currentView } = usePetGestor();
@@ -74,6 +75,8 @@ const MainLayout: React.FC = () => {
         return <ReportsView />;
       case 'settings':
         return <SettingsView />;
+      case 'data-management':
+        return <DataManagementView />;
       case 'availability':
         return <AvailabilityView />;
       case 'audit':
