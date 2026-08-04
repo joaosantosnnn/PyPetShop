@@ -81,6 +81,17 @@ export const FinancialView: React.FC = () => {
         </div>
       </div>
 
+      <section className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-sm">Resumo do caixa</h3><span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${cashRegister.status==='aberto'?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-600'}`}>{cashRegister.status}</span></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div><span className="text-slate-500 block">Dinheiro</span><b>{formatBRL(cashRegister.total_sales_cash||0)}</b></div>
+          <div><span className="text-slate-500 block">Pix</span><b>{formatBRL(cashRegister.total_sales_pix||0)}</b></div>
+          <div><span className="text-slate-500 block">Cartões</span><b>{formatBRL(cashRegister.total_sales_card||0)}</b></div>
+          <div><span className="text-slate-500 block">Créditos usados</span><b>{formatBRL(cashRegister.total_sales_credit||0)}</b></div>
+        </div>
+        {cashRegister.status==='aberto'&&<p className="text-[11px] text-slate-500 mt-3">Os totais definitivos são conciliados automaticamente no fechamento.</p>}
+      </section>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
