@@ -92,6 +92,7 @@ export interface Pet {
   customer_name?: string;
   name: string;
   photo_url?: string;
+  photo_path?: string;
   species: PetSpecies;
   breed?: string;
   gender: PetGender;
