@@ -1,79 +1,17 @@
-import React, { useState } from 'react';
-import { usePetGestor } from '../../context/AppContext';
-import { formatBRL, formatDate } from '../../utils/formatters';
-import { Users, DollarSign, Award, Percent, Phone, Mail, ShieldCheck } from 'lucide-react';
+import React,{useEffect,useState}from'react';
+import{usePetGestor}from'../../context/AppContext';
+import type{UserProfile,UserRole}from'../../types';
+import{formatBRL}from'../../utils/formatters';
+import{inviteEmployee,loadTeam,markCommissionPaid,updateEmployee}from'../../services/teamRepository';
+import{Users,Mail,Phone,Plus}from'lucide-react';
 
-export const EmployeesView: React.FC = () => {
-  const { allProfiles, sales, appointments, serviceOrders } = usePetGestor();
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-teal-600" />
-            Equipe, Tosadores & Comissões
-          </h2>
-          <p className="text-xs text-slate-500">
-            Controle de profissionais, taxas de comissão acumuladas e extrato de repasses
-          </p>
-        </div>
-      </div>
-
-      {/* Employees Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {allProfiles.map(emp => {
-          // Calculate total service orders performed by employee
-          const empOrders = serviceOrders.filter(so => 
-            so.items.some(i => i.assigned_employee_id === emp.id)
-          );
-
-          const estimatedCommission = empOrders.reduce((acc, so) => acc + (so.total * ((emp.commission_rate || 15) / 100)), 0);
-
-          return (
-            <div
-              key={emp.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition space-y-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200 font-bold text-lg flex items-center justify-center shrink-0">
-                  {emp.full_name.charAt(0)}
-                </div>
-
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                    {emp.full_name}
-                  </h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    {emp.role}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 space-y-1.5 text-xs">
-                <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span>Taxa de Comissão:</span>
-                  <span className="font-bold text-teal-600">{emp.commission_rate || 15}%</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span>Atendimentos Concluídos:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{empOrders.length}</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t">
-                  <span className="font-bold">Comissão a Pagar:</span>
-                  <span className="font-black text-emerald-600 text-sm">{formatBRL(estimatedCommission)}</span>
-                </div>
-              </div>
-
-              <div className="text-[11px] text-slate-500 space-y-1">
-                <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" /> {emp.phone || 'Telefone não informado'}</p>
-                <p className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-400" /> {emp.email}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+const roles:UserRole[]=['administrador','gerente','atendente','caixa','banhista','tosador','estoquista'];
+export const EmployeesView:React.FC=()=>{
+ const{company,currentProfile,addToast}=usePetGestor();const[profiles,setProfiles]=useState<UserProfile[]>([]);const[commissions,setCommissions]=useState<any[]>([]);const[open,setOpen]=useState(false);const[name,setName]=useState('');const[email,setEmail]=useState('');const[role,setRole]=useState<UserRole>('atendente');const[rate,setRate]=useState(0);
+ const reload=async()=>{const data=await loadTeam(company.id);setProfiles(data.profiles);setCommissions(data.commissions)};
+ useEffect(()=>{reload().catch(()=>addToast('Não foi possível carregar a equipe.','error'))},[company.id]);
+ const invite=async(e:React.FormEvent)=>{e.preventDefault();try{await inviteEmployee(company.id,email,name,role,rate,currentProfile.id);await reload();setOpen(false);setName('');setEmail('');addToast('Funcionário convidado. O acesso será ativado ao cadastrar este e-mail.','success')}catch(err){addToast(err instanceof Error?err.message:'Falha ao convidar.','error')}};
+ return <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto"><div className="flex justify-between gap-4"><div><h2 className="text-xl font-bold flex items-center gap-2"><Users className="w-6 h-6 text-teal-600"/>Equipe & Comissões</h2><p className="text-xs text-slate-500">Cargos, acessos e repasses dos profissionais</p></div>{['proprietario','administrador'].includes(currentProfile.role)&&<button onClick={()=>setOpen(true)} className="px-4 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold flex items-center gap-1"><Plus className="w-4 h-4"/>Convidar</button>}</div>
+ <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">{profiles.map(emp=>{const pending=commissions.filter(c=>c.employee_id===emp.id&&c.status==='pendente');const total=pending.reduce((a,c)=>a+Number(c.amount),0);return <div key={emp.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-5 space-y-3"><div className="flex justify-between"><div><h3 className="font-bold">{emp.full_name}</h3><span className="text-[10px] uppercase font-bold text-slate-500">{emp.role}</span></div><span className={`text-[10px] font-bold ${emp.is_active?'text-emerald-600':'text-rose-600'}`}>{emp.is_active?'ATIVO':'BLOQUEADO'}</span></div><p className="text-xs flex gap-1"><Mail className="w-3"/>{emp.email}</p><p className="text-xs flex gap-1"><Phone className="w-3"/>{emp.phone||'Sem telefone'}</p><div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl text-xs">Comissão: <b>{emp.commission_rate}%</b><br/>Pendente: <b className="text-emerald-600">{formatBRL(total)}</b></div>{emp.role!=='proprietario'&&['proprietario','administrador'].includes(currentProfile.role)&&<div className="flex gap-2"><button onClick={async()=>{await updateEmployee({...emp,is_active:!emp.is_active});await reload()}} className="flex-1 border rounded-lg py-1.5 text-xs font-bold">{emp.is_active?'Bloquear':'Ativar'}</button>{pending.length>0&&<button onClick={async()=>{for(const c of pending)await markCommissionPaid(c.id);await reload()}} className="flex-1 bg-emerald-600 text-white rounded-lg py-1.5 text-xs font-bold">Pagar comissões</button>}</div>}</div>})}</div>
+ {open&&<div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"><form onSubmit={invite} className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md space-y-3"><h3 className="font-bold text-lg">Convidar funcionário</h3><input required value={name} onChange={e=>setName(e.target.value)} placeholder="Nome completo" className="w-full border rounded-xl px-3 py-2"/><input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="E-mail" className="w-full border rounded-xl px-3 py-2"/><select value={role} onChange={e=>setRole(e.target.value as UserRole)} className="w-full border rounded-xl px-3 py-2">{roles.map(r=><option key={r}>{r}</option>)}</select><input type="number" min="0" max="100" value={rate} onChange={e=>setRate(Number(e.target.value))} placeholder="Comissão %" className="w-full border rounded-xl px-3 py-2"/><div className="flex justify-end gap-2"><button type="button" onClick={()=>setOpen(false)} className="px-4 py-2 border rounded-xl">Cancelar</button><button className="px-4 py-2 bg-teal-600 text-white rounded-xl font-bold">Salvar convite</button></div></form></div>}</div>;
 };
