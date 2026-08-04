@@ -1,0 +1,4 @@
+import{ supabase }from'../lib/supabase';import type{CustomerCommunication}from'../types';
+export async function loadCommunications(companyId:string){const{data,error}=await supabase.from('customer_communications').select('*').eq('company_id',companyId).order('scheduled_at',{ascending:true});if(error)throw new Error(error.message);return(data??[])as CustomerCommunication[]}
+export async function generateCommunications(companyId:string){const{data,error}=await supabase.rpc('generate_customer_communications',{p_company_id:companyId});if(error)throw new Error(error.message);return Number(data||0)}
+export async function markCommunicationSent(id:string){const{error}=await supabase.from('customer_communications').update({status:'enviado',sent_at:new Date().toISOString()}).eq('id',id);if(error)throw new Error(error.message)}
