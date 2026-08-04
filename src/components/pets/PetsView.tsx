@@ -218,6 +218,7 @@ export const PetsView: React.FC<PetsViewProps> = ({ onOpenNewAppointmentWithPet 
 
       {/* Pet Form Modal */}
       <PetFormModal
+        key={`${isModalOpen}-${editingPet?.id || 'novo'}`}
         isOpen={isModalOpen}
         pet={editingPet}
         onClose={() => setIsModalOpen(false)}
