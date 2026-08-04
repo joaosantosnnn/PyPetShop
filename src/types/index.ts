@@ -353,6 +353,7 @@ export interface CashRegister {
   total_sales_cash: number;
   total_sales_pix: number;
   total_sales_card: number;
+  total_sales_credit: number;
   total_supplements: number;
   total_withdrawals: number;
 }
