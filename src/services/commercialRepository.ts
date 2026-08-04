@@ -104,16 +104,19 @@ export interface SaleInput {
   discount: number;
   payment_method: string;
   amount_paid: number;
+  credit_amount?: number;
   notes?: string;
 }
 
 export async function completeProductSale(input: SaleInput) {
-  const { data, error } = await supabase.rpc('complete_product_sale', {
+  const mixed = Number(input.credit_amount ?? 0) > 0;
+  const { data, error } = await supabase.rpc(mixed ? 'complete_mixed_product_sale' : 'complete_product_sale', {
     p_customer_id: input.customer_id || null,
     p_items: input.items.map(item => ({ product_id: item.item_id, quantity: item.quantity })),
     p_discount: input.discount,
     p_payment_method: input.payment_method,
     p_amount_paid: input.amount_paid,
+    ...(mixed ? { p_credit_amount: input.credit_amount } : {}),
     p_notes: input.notes || null,
   });
   fail(error);
