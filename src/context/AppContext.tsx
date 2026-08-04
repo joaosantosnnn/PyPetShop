@@ -44,6 +44,7 @@ export type AppView =
   | 'consent'
   | 'reports'
   | 'audit'
+  | 'availability'
   | 'settings';
 
 export interface Toast {
