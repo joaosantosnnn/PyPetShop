@@ -6,6 +6,7 @@ import {
   Truck, DollarSign, UserCheck, HeartHandshake, 
   FileText, BarChart3, ShieldAlert, Settings, CalendarOff, MessageCircle, DatabaseBackup
 } from 'lucide-react';
+import { canAccessView } from '../../utils/permissions';
 
 interface NavItem {
   id: AppView;
@@ -67,7 +68,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-        {navItems.filter(item => !item.roles || item.roles.includes(currentProfile.role)).map((item) => {
+        {navItems.filter(item => canAccessView(currentProfile.role,item.id)).map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
 
