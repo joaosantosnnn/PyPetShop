@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Scissors, ClipboardList, 
   ShoppingCart, Users, Dog, Sparkles, Package, 
   Truck, DollarSign, UserCheck, HeartHandshake, 
-  FileText, BarChart3, ShieldAlert, Settings, LogOut, ChevronRight
+  FileText, BarChart3, ShieldAlert, Settings, ChevronRight
 } from 'lucide-react';
 
 interface NavItem {
@@ -16,7 +16,7 @@ interface NavItem {
 }
 
 export const Sidebar: React.FC = () => {
-  const { currentView, setCurrentView, currentProfile, company, resetDemoData, appointments, products } = usePetGestor();
+  const { currentView, setCurrentView, currentProfile, company, appointments, products } = usePetGestor();
 
   // Badges calculation
   const pendingAppointments = appointments.filter(a => a.status === 'agendado' || a.status === 'recebido').length;
@@ -93,7 +93,7 @@ export const Sidebar: React.FC = () => {
         })}
       </div>
 
-      {/* User Badge & Reset Demo */}
+      {/* User Badge */}
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
         <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-100 dark:border-slate-700/50">
           <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
@@ -108,15 +108,6 @@ export const Sidebar: React.FC = () => {
             </p>
           </div>
         </div>
-
-        <button
-          onClick={resetDemoData}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
-          title="Restaurar dados de teste"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Restaurar Dados Teste</span>
-        </button>
       </div>
     </aside>
   );
