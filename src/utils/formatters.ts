@@ -79,5 +79,5 @@ export function exportToExcel(data: any[], filename: string) {
 }
 
 export function generateId(): string {
-  return 'id-' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+  return crypto.randomUUID();
 }
