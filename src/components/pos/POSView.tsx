@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePetGestor } from '../../context/AppContext';
 import { Product, Customer } from '../../types';
 import { formatBRL } from '../../utils/formatters';
@@ -6,6 +6,7 @@ import {
   ShoppingCart, Search, Barcode, Trash2, Plus, 
   Minus, DollarSign, CreditCard, QrCode, User, CheckCircle2, Printer
 } from 'lucide-react';
+import { loadCustomerCreditBalance } from '../../services/refundRepository';
 
 export const POSView: React.FC = () => {
   const { products, services, customers, recordSale } = usePetGestor();
@@ -25,10 +26,16 @@ export const POSView: React.FC = () => {
   }[]>([]);
 
   const [discount, setDiscount] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'fiado'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'fiado' | 'saldo_credito'>('pix');
+  const [creditBalance, setCreditBalance] = useState(0);
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<any | null>(null);
   const [isFinalizing, setIsFinalizing] = useState(false);
+
+  useEffect(() => {
+    if (!selectedCustomerId) { setCreditBalance(0); if (paymentMethod === 'saldo_credito') setPaymentMethod('pix'); return; }
+    loadCustomerCreditBalance(selectedCustomerId).then(setCreditBalance).catch(() => setCreditBalance(0));
+  }, [selectedCustomerId]);
 
   // Filter products for catalog
   const filteredProducts = products.filter(p => {
@@ -117,6 +124,7 @@ export const POSView: React.FC = () => {
       setCartItems([]);
       setDiscount(0);
       setAmountPaid(0);
+      if (selectedCustomerId) setCreditBalance(await loadCustomerCreditBalance(selectedCustomerId));
     } finally {
       setIsFinalizing(false);
     }
@@ -285,6 +293,7 @@ export const POSView: React.FC = () => {
                   { id: 'cartao_debito', label: 'Débito', icon: CreditCard },
                   { id: 'cartao_credito', label: 'Crédito', icon: CreditCard },
                   { id: 'dinheiro', label: 'Dinheiro', icon: DollarSign },
+                  { id: 'saldo_credito', label: 'Saldo de crédito', icon: CheckCircle2 },
                 ].map(m => (
                   <button
                     key={m.id}
@@ -300,6 +309,15 @@ export const POSView: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            {selectedCustomerId && (
+              <div className="flex items-center justify-between rounded-xl bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-emerald-800 dark:text-emerald-200">
+                <span>Crédito disponível</span><strong>{formatBRL(creditBalance)}</strong>
+              </div>
+            )}
+            {paymentMethod === 'saldo_credito' && creditBalance < finalTotal && (
+              <p className="text-rose-600 font-semibold">O saldo não é suficiente para quitar esta venda.</p>
+            )}
 
             {paymentMethod === 'dinheiro' && (
               <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
@@ -320,7 +338,7 @@ export const POSView: React.FC = () => {
             )}
 
             <button
-              disabled={cartItems.length === 0 || isFinalizing}
+              disabled={cartItems.length === 0 || isFinalizing || (paymentMethod === 'saldo_credito' && (!selectedCustomerId || creditBalance < finalTotal))}
               onClick={handleFinalizeSale}
               className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm shadow-md transition"
             >
