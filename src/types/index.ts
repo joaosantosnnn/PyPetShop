@@ -390,12 +390,16 @@ export interface DeliveryRequest {
   pet_name?: string;
   type: 'busca' | 'entrega' | 'ambos';
   address: string;
-  scheduled_time: string;
+  scheduled_at: string;
+  driver_id?: string;
   driver_name?: string;
   delivery_fee: number;
-  status: 'pendente' | 'em_trânsito' | 'concluído' | 'cancelado';
+  status: 'pendente' | 'em_transito' | 'concluido' | 'cancelado';
   notes?: string;
   delivered_to_person?: string;
+  created_by: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LoyaltyPackage {
