@@ -25,6 +25,7 @@ import { TermsView } from './components/terms/TermsView';
 import { ReportsView } from './components/reports/ReportsView';
 import { SettingsView } from './components/settings/SettingsView';
 import { AvailabilityView } from './components/settings/AvailabilityView';
+import { AuditView } from './components/audit/AuditView';
 
 const MainLayout: React.FC = () => {
   const { currentView } = usePetGestor();
@@ -67,6 +68,8 @@ const MainLayout: React.FC = () => {
         return <SettingsView />;
       case 'availability':
         return <AvailabilityView />;
+      case 'audit':
+        return <AuditView />;
       default:
         return <DashboardView />;
     }
