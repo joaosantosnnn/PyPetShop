@@ -24,6 +24,7 @@ import {
   addOrderItem, insertFinancialTransaction, loadServiceOrders, openServiceOrder, payServiceOrder,
 } from '../services/serviceOrderRepository';
 import { closeCash, loadOpenCash, moveCash, openCash } from '../services/cashRepository';
+import { insertDeliveryRequest, loadDeliveryRequests, saveDeliveryRequest } from '../services/deliveryRepository';
 
 export type AppView = 
   | 'dashboard'
@@ -185,10 +186,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>(() => {
-    const saved = localStorage.getItem('petgestor_delivery');
-    return saved ? JSON.parse(saved) : initialDeliveryRequests;
-  });
+  const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>(initialDeliveryRequests);
 
   const [consentTerms] = useState<ConsentTerm[]>(initialConsentTerms);
 
@@ -212,7 +210,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadCommercialData(currentProfile.company_id),
       loadServiceOrders(currentProfile.company_id),
       loadOpenCash(currentProfile.company_id),
-    ]).then(([data, commercial, orders, openRegister]) => {
+      loadDeliveryRequests(currentProfile.company_id),
+    ]).then(([data, commercial, orders, openRegister, deliveries]) => {
         if (!active) return;
         setCompany(data.company);
         setCustomers(data.customers);
@@ -227,6 +226,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setServiceOrders(orders.orders);
         setFinancialTransactions(orders.financialTransactions);
         setCashRegister(openRegister || { ...initialCashRegister, status: 'fechado' });
+        setDeliveryRequests(deliveries.map(item => ({
+          ...item,
+          customer_name: data.customers.find(customer => customer.id === item.customer_id)?.name,
+          pet_name: data.pets.find(pet => pet.id === item.pet_id)?.name,
+          driver_name: data.profiles.find(profile => profile.id === item.driver_id)?.full_name,
+        })));
       })
       .catch(() => {
         if (active) addToast('Não foi possível carregar os dados do PetShop.', 'error');
@@ -779,11 +784,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       company_id: company.id,
     };
     setDeliveryRequests(prev => [newReq, ...prev]);
-    addToast(`Solicitação de Táxi Dog agendada para ${newReq.pet_name}!`, 'success');
+    insertDeliveryRequest(newReq).catch(() => {
+      setDeliveryRequests(prev => prev.filter(item => item.id !== newReq.id));
+      addToast('Não foi possível agendar a busca ou entrega.', 'error');
+    });
+    addToast(`Transporte agendado para ${newReq.pet_name}!`, 'success');
   };
 
   const updateDeliveryStatus = (id: string, status: DeliveryRequest['status']) => {
-    setDeliveryRequests(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+    const previous = deliveryRequests.find(item => item.id === id);
+    if (!previous) return;
+    const updated = { ...previous, status };
+    setDeliveryRequests(prev => prev.map(d => d.id === id ? updated : d));
+    saveDeliveryRequest(updated).catch(() => {
+      setDeliveryRequests(prev => prev.map(item => item.id === id ? previous : item));
+      addToast('Não foi possível atualizar o transporte.', 'error');
+    });
     addToast(`Status do transporte atualizado para "${status.toUpperCase()}"`, 'info');
   };
 
