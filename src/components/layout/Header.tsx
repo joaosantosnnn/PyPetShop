@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { usePetGestor } from '../../context/AppContext';
 import { 
-  Search, Plus, Sun, Moon, Calendar, ShoppingCart, 
-  UserPlus, DollarSign, Database, UserCheck, Bell, ChevronDown 
+  Sun, Moon, Calendar, ShoppingCart, 
+  UserPlus, DollarSign, Database, LogOut
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 interface HeaderProps {
-  onOpenNewAppointment: () => void;
-  onOpenNewSale: () => void;
-  onOpenNewCustomer: () => void;
-  onOpenNewExpense: () => void;
+  onOpenNewAppointment?: () => void;
+  onOpenNewSale?: () => void;
+  onOpenNewCustomer?: () => void;
+  onOpenNewExpense?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  onOpenNewAppointment,
-  onOpenNewSale,
-  onOpenNewCustomer,
-  onOpenNewExpense,
+  onOpenNewAppointment = () => undefined,
+  onOpenNewSale = () => undefined,
+  onOpenNewCustomer = () => undefined,
+  onOpenNewExpense = () => undefined,
 }) => {
-  const { theme, toggleTheme, currentProfile, setCurrentProfile, allProfiles, currentView } = usePetGestor();
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const { theme, toggleTheme, currentProfile, currentView } = usePetGestor();
 
   const viewTitles: Record<string, string> = {
     dashboard: 'Painel Principal',
@@ -113,42 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Role Switcher */}
-        <div className="relative">
-          <button
-            onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
-          >
-            <UserCheck className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-            <span className="hidden sm:inline font-semibold capitalize">{currentProfile.role}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
-          </button>
-
-          {showRoleDropdown && (
-            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-1.5 z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Simular Perfil
-              </div>
-              {allProfiles.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setCurrentProfile(p);
-                    setShowRoleDropdown(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition ${
-                    p.id === currentProfile.id
-                      ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-bold'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
-                  }`}
-                >
-                  <span className="truncate">{p.full_name}</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">{p.role}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <span className="hidden sm:inline text-xs font-semibold capitalize text-slate-500">{currentProfile.role}</span>
 
         {/* Theme Toggle Button */}
         <button
@@ -158,6 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-400" />}
         </button>
+        <button onClick={() => supabase.auth.signOut()} className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition" title="Sair"><LogOut className="w-4 h-4" /></button>
       </div>
     </header>
   );
