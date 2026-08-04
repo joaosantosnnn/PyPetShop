@@ -372,14 +372,21 @@ export interface PurchaseOrder {
   company_id: string;
   supplier_id: string;
   supplier_name?: string;
+  supplier_id: string;
   order_number: number;
   status: 'rascunho' | 'enviado' | 'recebido_parcial' | 'recebido' | 'cancelado';
   total_amount: number;
+  subtotal: number;
+  discount: number;
+  freight: number;
+  due_date: string;
   expected_delivery_date?: string;
   received_date?: string;
   notes?: string;
   created_at: string;
+  items: PurchaseOrderItem[];
 }
+export interface PurchaseOrderItem{id:string;company_id:string;purchase_order_id:string;product_id:string;product_name:string;quantity:number;received_quantity:number;unit_cost:number;total_cost:number;batch_number?:string;expiration_date?:string;created_at:string}
 
 export interface DeliveryRequest {
   id: string;
