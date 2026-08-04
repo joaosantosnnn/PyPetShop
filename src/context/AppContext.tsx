@@ -14,7 +14,7 @@ import { generateId, formatBRL } from '../utils/formatters';
 import { isSupabaseConfigured } from '../lib/supabase';
 import {
   insertAppointment, insertCustomer, insertPet, insertService, loadOperationalData,
-  saveAppointment, saveCustomer, savePet, saveService,
+  saveAppointment, saveCompany, saveCustomer, savePet, saveService,
 } from '../services/petshopRepository';
 import {
   adjustProductStock, completeProductSale, insertProduct, insertSupplier,
@@ -272,10 +272,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Company Update
   const updateCompany = (newCompany: Company) => {
+    const previous = company;
     setCompany(newCompany);
     localStorage.setItem('petgestor_company', JSON.stringify(newCompany));
-    addToast('Dados da empresa atualizados!', 'success');
-    logAudit('Atualização de Empresa', 'Empresa', newCompany.id, newCompany.name);
+    saveCompany(newCompany).then(saved => {
+      setCompany(saved);
+      localStorage.setItem('petgestor_company', JSON.stringify(saved));
+      addToast('Dados da empresa atualizados!', 'success');
+      logAudit('Atualização de Empresa', 'Empresa', saved.id, saved.name);
+    }).catch(() => {
+      setCompany(previous);
+      localStorage.setItem('petgestor_company', JSON.stringify(previous));
+      addToast('Não foi possível salvar as configurações.', 'error');
+    });
   };
 
   // Customers CRUD
