@@ -468,6 +468,7 @@ export interface PetIncident {
 export interface TermAcceptance { id:string;company_id:string;term_id:string;customer_id:string;pet_id?:string;appointment_id?:string;term_title:string;term_content:string;term_version:number;accepted_by_name:string;accepted_at:string;expires_at?:string;created_by:string;created_at?:string; }
 export interface PetCheckin { id:string;company_id:string;appointment_id?:string;customer_id:string;pet_id:string;responsible_name:string;weight?:number;pre_existing_conditions?:string;belongings?:string;observations?:string;photo_urls:string[];status:'entrada'|'em_atendimento'|'finalizado'|'entregue';checked_in_at:string;checked_out_at?:string;created_by:string;created_at?:string;updated_at?:string; }
 export interface PetWeightRecord { id:string;company_id:string;pet_id:string;weight:number;source:'cadastro'|'atualizacao'|'checkin'|'manual';source_id?:string;notes?:string;recorded_by?:string;recorded_at:string;created_at?:string; }
+export interface CustomerCommunication {id:string;company_id:string;customer_id:string;pet_id?:string;appointment_id?:string;customer_package_id?:string;communication_type:'confirmacao'|'lembrete'|'pet_pronto'|'retorno'|'aniversario'|'pacote_vencendo'|'manual';channel:'whatsapp'|'telefone'|'email';recipient:string;message:string;scheduled_at:string;status:'pendente'|'enviado'|'cancelado'|'falhou';sent_at?:string;sent_by?:string;created_by?:string;created_at:string;updated_at?:string}
 
 export interface AuditLog {
   id: number;
