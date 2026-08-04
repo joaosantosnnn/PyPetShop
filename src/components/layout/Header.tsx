@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { supabase } from '../../lib/supabase';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 interface HeaderProps {
   onOpenNewAppointment?: () => void;
@@ -114,6 +115,8 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <span className="hidden sm:inline text-xs font-semibold capitalize text-slate-500">{currentProfile.role}</span>
+
+        <NotificationBell />
 
         {/* Theme Toggle Button */}
         <button
