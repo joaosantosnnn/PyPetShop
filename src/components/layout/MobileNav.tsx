@@ -3,7 +3,7 @@ import { usePetGestor, AppView } from '../../context/AppContext';
 import { 
   LayoutDashboard, Calendar, Scissors, ShoppingCart, 
   Menu, X, Dog, Users, Sparkles, Package, DollarSign, 
-  Truck, Settings, FileText, BarChart3, UserCheck, HeartHandshake, ClipboardList, ShieldAlert, CalendarOff, MessageCircle
+  Truck, Settings, FileText, BarChart3, UserCheck, HeartHandshake, ClipboardList, ShieldAlert, CalendarOff, MessageCircle, DatabaseBackup
 } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
@@ -41,6 +41,7 @@ export const MobileNav: React.FC = () => {
     { id: 'audit', label: 'Logs de Auditoria', icon: ShieldAlert, roles: ['proprietario', 'administrador'] },
     { id: 'availability', label: 'Bloqueios da Agenda', icon: CalendarOff, roles: ['proprietario', 'administrador', 'gerente', 'atendente'] },
     { id: 'settings', label: 'Configurações', icon: Settings, roles: ['proprietario', 'administrador'] },
+    { id: 'data-management', label: 'Backup & Dados', icon: DatabaseBackup, roles: ['proprietario', 'administrador'] },
   ];
 
   return (
