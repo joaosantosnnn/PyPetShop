@@ -35,11 +35,14 @@ import { PortalPixWidget } from './components/portal/PortalPixWidget';
 import { PortalReceiptsWidget } from './components/portal/PortalReceiptsWidget';
 import { PortalAppointmentActions } from './components/portal/PortalAppointmentActions';
 import { PortalCreditsWidget } from './components/portal/PortalCreditsWidget';
+import { canAccessView } from './utils/permissions';
 
 const MainLayout: React.FC = () => {
   const { currentView } = usePetGestor();
+  const { currentProfile,setCurrentView } = usePetGestor();
 
   const renderView = () => {
+    if(!canAccessView(currentProfile.role,currentView))return <div className="p-6"><div className="max-w-lg mx-auto mt-16 bg-white dark:bg-slate-900 border rounded-2xl p-6 text-center"><h2 className="font-bold text-lg">Acesso restrito</h2><p className="text-sm text-slate-500 my-3">Seu cargo nao possui permissao para acessar esta area.</p><button onClick={()=>setCurrentView('dashboard')} className="px-4 py-2 bg-teal-600 text-white rounded-xl text-sm font-bold">Voltar ao painel</button></div></div>;
     switch (currentView) {
       case 'dashboard':
         return <DashboardView />;
