@@ -17,7 +17,7 @@ import {
   saveAppointment, saveCompany, saveCustomer, savePet, saveService,
 } from '../services/petshopRepository';
 import {
-  adjustProductStock, completeProductSale, insertProduct, insertSupplier,
+  adjustProductStock, completeProductSale, insertProduct, insertSupplier, returnProductSale,
   loadCommercialData, saveProduct, type SaleInput,
 } from '../services/commercialRepository';
 import {
@@ -125,7 +125,7 @@ interface AppContextType {
   // Actions - Sales / POS
   completeSale: (saleData: Omit<Sale, 'id' | 'company_id' | 'sale_number' | 'created_at'>) => Sale;
   recordSale: (saleData: SaleInput) => Promise<{ id: string; sale_number: number; subtotal: number; total_amount: number; change_amount: number; created_at: string }>;
-  cancelSale: (saleId: string, reason: string) => void;
+  cancelSale: (saleId: string, reason: string) => Promise<void>;
   
   // Actions - Financial & Cash Register
   addFinancialTransaction: (transaction: Omit<FinancialTransaction, 'id' | 'company_id' | 'created_at'>) => void;
@@ -680,28 +680,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const cancelSale = (saleId: string, reason: string) => {
+  const cancelSale = async (saleId: string, reason: string) => {
     const sale = sales.find(s => s.id === saleId);
-    if (!sale) return;
-
-    setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: 'cancelada', notes: `Cancelada: ${reason}` } : s));
-
-    // Restore stock
-    sale.items.forEach(item => {
-      addStockMovement({
-        product_id: item.product.id,
-        product_name: item.product.name,
-        movement_type: 'devolucao',
-        quantity: item.quantity,
-        unit_cost: item.product.cost_price,
-        previous_stock: item.product.current_stock,
-        new_stock: item.product.current_stock + item.quantity,
-        reason: `Cancelamento da Venda #${sale.sale_number}: ${reason}`,
-      });
-    });
-
-    addToast(`Venda #${sale.sale_number} cancelada e estoque reposto!`, 'warning');
-    logAudit('Cancelamento de Venda', 'Venda', saleId, `Motivo: ${reason}`);
+    if (!sale) throw new Error('Venda nao encontrada.');
+    try{const result=await returnProductSale(saleId,reason);const[commercial,operational]=await Promise.all([loadCommercialData(company.id),loadOperationalData(company.id)]);setProducts(commercial.products);setStockMovements(commercial.stockMovements);setSales(commercial.sales);setCustomers(operational.customers);addToast(result.refund_amount>0?`Venda #${result.sale_number} devolvida. Estorno pendente.`:`Venda #${result.sale_number} devolvida e credito emitido.`,'warning');}
+    catch(error){addToast(error instanceof Error?error.message:'Nao foi possivel devolver a venda.','error');throw error}
   };
 
   // Financial & Cash Register
