@@ -573,8 +573,9 @@ export const initialDeliveryRequests: DeliveryRequest[] = [
     pet_name: 'Thor',
     type: 'ambos',
     address: 'Rua Bela Cintra, 1450 - Consolação',
-    scheduled_time: '14:00',
+    scheduled_at: new Date().toISOString(),
+    created_by: 'user-1',
     delivery_fee: 25.00,
-    status: 'em_trânsito',
+    status: 'em_transito',
   }
 ];
