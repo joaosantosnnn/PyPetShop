@@ -44,6 +44,17 @@ export interface UserProfile {
   created_at?: string;
 }
 
+export interface BlockedTime {
+  id: string;
+  company_id: string;
+  employee_id?: string | null;
+  start_at: string;
+  end_at: string;
+  reason: string;
+  created_by: string;
+  created_at?: string;
+}
+
 export interface Customer {
   id: string;
   company_id: string;
