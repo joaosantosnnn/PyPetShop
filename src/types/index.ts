@@ -241,6 +241,8 @@ export interface Product {
   photo_url?: string;
   batch_number?: string;
   expiration_date?: string;
+  next_batch_number?: string;
+  next_expiration_date?: string;
   is_active: boolean;
   created_at?: string;
 }
@@ -274,6 +276,9 @@ export interface StockMovement {
   created_by_name?: string;
   created_at: string;
 }
+
+export interface InventoryCountItem { id:string; company_id:string; inventory_count_id:string; product_id:string; product_name:string; expected_quantity:number; counted_quantity:number|null; difference:number|null }
+export interface InventoryCount { id:string; company_id:string; name:string; status:'aberto'|'concluido'|'cancelado'; created_by:string; completed_by?:string; created_at:string; completed_at?:string; items:InventoryCountItem[] }
 
 export type PaymentMethod = 
   | 'dinheiro'
