@@ -442,12 +442,14 @@ export interface PetIncident {
 }
 
 export interface AuditLog {
-  id: string;
+  id: number;
   company_id: string;
-  user_name: string;
-  action: string;
+  actor_id?: string;
+  actor_name: string;
+  action: 'INSERT' | 'UPDATE' | 'DELETE';
   entity_type: string;
   entity_id?: string;
-  details: string;
+  before_data?: Record<string, unknown>;
+  after_data?: Record<string, unknown>;
   created_at: string;
 }
