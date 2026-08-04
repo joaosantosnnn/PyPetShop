@@ -3,7 +3,7 @@ import { usePetGestor, AppView } from '../../context/AppContext';
 import { 
   LayoutDashboard, Calendar, Scissors, ShoppingCart, 
   Menu, X, Dog, Users, Sparkles, Package, DollarSign, 
-  Truck, Settings, FileText, BarChart3, UserCheck, HeartHandshake, ClipboardList, ShieldAlert, CalendarOff
+  Truck, Settings, FileText, BarChart3, UserCheck, HeartHandshake, ClipboardList, ShieldAlert, CalendarOff, MessageCircle
 } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
@@ -35,6 +35,7 @@ export const MobileNav: React.FC = () => {
     { id: 'delivery', label: 'Busca & Entrega (Táxi)', icon: Truck },
     { id: 'loyalty', label: 'Fidelidade & Pacotes', icon: HeartHandshake, roles: ['proprietario', 'administrador', 'gerente', 'atendente', 'caixa'] },
     { id: 'consent', label: 'Termos & Incidentes', icon: FileText },
+    { id: 'communications', label: 'Comunicação & WhatsApp', icon: MessageCircle, roles: ['proprietario','administrador','gerente','atendente'] },
     { id: 'reports', label: 'Relatórios Operacionais', icon: BarChart3, roles: ['proprietario', 'administrador', 'gerente'] },
     { id: 'audit', label: 'Logs de Auditoria', icon: ShieldAlert, roles: ['proprietario', 'administrador'] },
     { id: 'availability', label: 'Bloqueios da Agenda', icon: CalendarOff, roles: ['proprietario', 'administrador', 'gerente', 'atendente'] },
