@@ -15,7 +15,7 @@ interface AppointmentsViewProps {
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }) => {
   const { 
-    appointments, updateAppointmentStatus, addServiceOrder, 
+    appointments, addAppointment, updateAppointmentStatus, addServiceOrder, 
     allProfiles, setCurrentView 
   } = usePetGestor();
 
@@ -274,9 +274,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
         isOpen={isModalOpen}
         initialPet={initialPet}
         onClose={() => setIsModalOpen(false)}
-        onSave={appData => {
-          usePetGestor().addAppointment(appData);
-        }}
+        onSave={addAppointment}
       />
     </div>
   );
