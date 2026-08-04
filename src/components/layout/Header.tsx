@@ -43,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
     reports: 'Relatórios & Inteligência',
     audit: 'Logs de Auditoria',
     settings: 'Configurações do Sistema',
+    'data-management': 'Backup & Portabilidade',
   };
 
   const todayFormatted = new Date().toLocaleDateString('pt-BR', {
