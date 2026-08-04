@@ -10,12 +10,16 @@ import {
 export const ComandasView: React.FC = () => {
   const { 
     serviceOrders, products, services, 
-    finalizeServiceOrder, updateServiceOrder 
+    addServiceOrderItem, finalizeServiceOrder,
   } = usePetGestor();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSO, setSelectedSO] = useState<ServiceOrder | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'credito' | 'debito'>('pix');
+  const [itemOrder, setItemOrder] = useState<ServiceOrder | null>(null);
+  const [itemType, setItemType] = useState<'service' | 'product' | 'internal_consumption'>('product');
+  const [itemId, setItemId] = useState('');
+  const [itemQuantity, setItemQuantity] = useState(1);
 
   const filteredOrders = serviceOrders.filter(so => {
     const term = searchTerm.toLowerCase();
@@ -121,12 +125,17 @@ export const ComandasView: React.FC = () => {
                     </button>
 
                     {!isPaid && (
-                      <button
-                        onClick={() => setSelectedSO(so)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs"
-                      >
-                        Fechar Comanda
-                      </button>
+                      <>
+                        <button onClick={() => { setItemOrder(so); setItemId(''); }} className="px-3 py-1.5 border border-teal-300 text-teal-700 rounded-xl font-bold text-xs">
+                          + Item
+                        </button>
+                        <button
+                          onClick={() => setSelectedSO(so)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs"
+                        >
+                          Receber
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -137,6 +146,30 @@ export const ComandasView: React.FC = () => {
       </div>
 
       {/* Checkout Comanda Modal */}
+      {itemOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md border space-y-4 text-xs">
+            <h3 className="font-bold text-lg">Adicionar item à comanda #{itemOrder.order_number}</h3>
+            <select value={itemType} onChange={e => { setItemType(e.target.value as typeof itemType); setItemId(''); }} className="w-full px-3 py-2 border rounded-xl">
+              <option value="service">Serviço adicional</option>
+              <option value="product">Produto vendido ao tutor</option>
+              <option value="internal_consumption">Produto consumido no atendimento</option>
+            </select>
+            <select value={itemId} onChange={e => setItemId(e.target.value)} className="w-full px-3 py-2 border rounded-xl">
+              <option value="">Selecione o item</option>
+              {itemType === 'service'
+                ? services.filter(item => item.is_active).map(item => <option key={item.id} value={item.id}>{item.name} — {formatBRL(item.base_price)}</option>)
+                : products.filter(item => item.is_active && item.current_stock > 0).map(item => <option key={item.id} value={item.id}>{item.name} — estoque {item.current_stock}</option>)}
+            </select>
+            <input type="number" min="0.001" step="0.001" value={itemQuantity} onChange={e => setItemQuantity(Number(e.target.value))} className="w-full px-3 py-2 border rounded-xl" />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setItemOrder(null)} className="px-4 py-2 border rounded-xl">Cancelar</button>
+              <button disabled={!itemId || itemQuantity <= 0} onClick={async () => { try { await addServiceOrderItem(itemOrder.id, itemType, itemId, itemQuantity); setItemOrder(null); } catch {} }} className="px-5 py-2 bg-teal-600 disabled:opacity-50 text-white rounded-xl font-bold">Adicionar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedSO && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md border border-slate-200 dark:border-slate-800 space-y-4">
@@ -145,7 +178,7 @@ export const ComandasView: React.FC = () => {
             </h3>
 
             <p className="text-xs text-slate-500">
-              Valor Total a Receber: <strong className="text-emerald-600 text-base">{formatBRL(selectedSO.total)}</strong>
+              Saldo a receber: <strong className="text-emerald-600 text-base">{formatBRL(selectedSO.total - selectedSO.paid_amount)}</strong>
             </p>
 
             <div>
@@ -172,10 +205,7 @@ export const ComandasView: React.FC = () => {
                 Cancelar
               </button>
               <button
-                onClick={() => {
-                  finalizeServiceOrder(selectedSO.id, paymentMethod, selectedSO.total);
-                  setSelectedSO(null);
-                }}
+                onClick={async () => { try { await finalizeServiceOrder(selectedSO.id, paymentMethod, selectedSO.total - selectedSO.paid_amount); setSelectedSO(null); } catch {} }}
                 className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md"
               >
                 Confirmar Recebimento
