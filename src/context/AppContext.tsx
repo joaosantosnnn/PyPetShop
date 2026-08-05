@@ -159,7 +159,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Navigation & Theme
-  const [currentView, setCurrentView] = useState<AppView>('dashboard');
+  const [currentView, setCurrentView] = useState<AppView>('appointments');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('petgestor_theme') as 'light' | 'dark') || 'light';
   });
