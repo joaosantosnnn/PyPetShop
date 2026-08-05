@@ -75,14 +75,22 @@ export async function saveCompany(company: Company) {
 }
 
 export async function insertCustomer(customer: Customer) {
-  const { data, error } = await supabase.from('customers').insert(customer).select().single();
+  const row = {
+    ...customer,
+    birth_date: customer.birth_date?.trim() || null,
+  };
+  const { data, error } = await supabase.from('customers').insert(row).select().single();
   fail(error);
   return data as Customer;
 }
 
 export async function saveCustomer(customer: Customer) {
   const { id, company_id, ...changes } = customer;
-  const { data, error } = await supabase.from('customers').update(changes).eq('id', id).eq('company_id', company_id).select().single();
+  const row = {
+    ...changes,
+    birth_date: changes.birth_date?.trim() || null,
+  };
+  const { data, error } = await supabase.from('customers').update(row).eq('id', id).eq('company_id', company_id).select().single();
   fail(error);
   return data as Customer;
 }
