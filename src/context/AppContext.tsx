@@ -93,7 +93,7 @@ interface AppContextType {
   petIncidents: PetIncident[];
   
   // Actions - Customers
-  addCustomer: (customer: Omit<Customer, 'id' | 'company_id' | 'total_spent' | 'outstanding_balance'>) => Customer;
+  addCustomer: (customer: Omit<Customer, 'id' | 'company_id' | 'total_spent' | 'outstanding_balance'>) => Promise<Customer>;
   updateCustomer: (customer: Customer) => void;
   toggleCustomerActive: (id: string) => void;
   
@@ -300,7 +300,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Customers CRUD
-  const addCustomer = (data: Omit<Customer, 'id' | 'company_id' | 'total_spent' | 'outstanding_balance'>) => {
+  const addCustomer = async (data: Omit<Customer, 'id' | 'company_id' | 'total_spent' | 'outstanding_balance'>) => {
     const newCust: Customer = {
       ...data,
       id: generateId(),
@@ -310,17 +310,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
     setCustomers(prev => [newCust, ...prev]);
-    insertCustomer(newCust)
-      .then(saved => {
-        setCustomers(prev => prev.map(item => item.id === newCust.id ? saved : item));
-        addToast(`Cliente ${saved.name} cadastrado(a) com sucesso!`, 'success');
-        logAudit('Novo Cliente', 'Cliente', saved.id, saved.name);
-      })
-      .catch(() => {
-        setCustomers(prev => prev.filter(item => item.id !== newCust.id));
-        addToast(`Não foi possível cadastrar ${newCust.name}.`, 'error');
-      });
-    return newCust;
+    try {
+      const saved = await insertCustomer(newCust);
+      setCustomers(prev => prev.map(item => item.id === newCust.id ? saved : item));
+      addToast(`Cliente ${saved.name} cadastrado(a) com sucesso!`, 'success');
+      logAudit('Novo Cliente', 'Cliente', saved.id, saved.name);
+      return saved;
+    } catch (error) {
+      setCustomers(prev => prev.filter(item => item.id !== newCust.id));
+      addToast(`Não foi possível cadastrar ${newCust.name}.`, 'error');
+      throw error;
+    }
   };
 
   const updateCustomer = (updated: Customer) => {
