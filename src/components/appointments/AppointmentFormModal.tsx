@@ -19,8 +19,6 @@ export const AppointmentFormModal: React.FC<AppointmentFormModalProps> = ({
 }) => {
   const { customers, pets, services, allProfiles, appointments } = usePetGestor();
 
-  if (!isOpen) return null;
-
   const [selectedPetId, setSelectedPetId] = useState(initialPet?.id || (pets[0]?.id || ''));
   const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id || '');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(allProfiles.find(p => p.role === 'tosador')?.id || allProfiles[0]?.id || '');
@@ -47,6 +45,8 @@ export const AppointmentFormModal: React.FC<AppointmentFormModalProps> = ({
 
   const [customPrice, setCustomPrice] = useState<number | ''>('');
   const finalPrice = customPrice !== '' ? Number(customPrice) : calculatedPrice;
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
