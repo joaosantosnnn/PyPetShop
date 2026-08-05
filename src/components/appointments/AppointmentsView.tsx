@@ -1,13 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { usePetGestor } from '../../context/AppContext';
-import { Appointment, Pet } from '../../types';
+import { Appointment, BlockedTime, Pet } from '../../types';
 import { formatBRL, formatDate, formatTime } from '../../utils/formatters';
 import { AppointmentFormModal } from './AppointmentFormModal';
 import { PortalRequestsPanel } from './PortalRequestsPanel';
+import { loadCalendarBlockedTimes } from '../../services/scheduleRepository';
 import { generateWhatsAppLink, buildAppointmentReminderMessage, buildPetReadyMessage } from '../../utils/whatsapp';
 import { 
   Calendar as CalendarIcon, Plus, Filter, Scissors, 
-  Clock, XCircle, Phone, AlertTriangle, ClipboardList, ChevronLeft, ChevronRight
+  Clock, XCircle, Phone, AlertTriangle, ClipboardList, ChevronLeft, ChevronRight, Ban
 } from 'lucide-react';
 
 interface AppointmentsViewProps {
@@ -29,11 +30,16 @@ const startOfWeek = (date: Date) => {
   return result;
 };
 const monthLabel = (date: Date) => date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+const blockOverlapsDay = (block: BlockedTime, day: Date) => {
+  const start = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  const end = addDays(start, 1);
+  return new Date(block.start_at) < end && new Date(block.end_at) > start;
+};
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }) => {
   const { 
     appointments, addAppointment, updateAppointmentStatus, addServiceOrder, 
-    allProfiles, setCurrentView 
+    allProfiles, setCurrentView, company, addToast
   } = usePetGestor();
 
   const [viewMode, setViewMode] = useState<'diaria' | 'semanal' | 'mensal'>('diaria');
@@ -42,6 +48,15 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
   const [isModalOpen, setIsModalOpen] = useState(Boolean(initialPet));
   const [cancelReasonModalApp, setCancelReasonModalApp] = useState<Appointment | null>(null);
   const [cancellationReasonText, setCancellationReasonText] = useState('');
+  const [blockedTimes, setBlockedTimes] = useState<BlockedTime[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    loadCalendarBlockedTimes(company.id)
+      .then(data => { if (active) setBlockedTimes(data); })
+      .catch(() => { if (active) addToast('Não foi possível carregar os bloqueios da agenda.', 'error'); });
+    return () => { active = false; };
+  }, [company.id]);
 
   const employeeAppointments = appointments.filter(a => {
     if (selectedEmployeeFilter !== 'all' && a.employee_id !== selectedEmployeeFilter) {
@@ -49,6 +64,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
     }
     return true;
   });
+
+  const filteredBlockedTimes = blockedTimes.filter(block => selectedEmployeeFilter === 'all' || !block.employee_id || block.employee_id === selectedEmployeeFilter);
 
   const periodAppointments = useMemo(() => {
     const referenceKey = dateKey(referenceDate);
@@ -77,6 +94,20 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
     const selectedKey = dateKey(referenceDate);
     return periodAppointments.filter(item => appointmentDateKey(item.scheduled_at) === selectedKey);
   }, [periodAppointments, referenceDate, viewMode]);
+
+  const visibleBlockedTimes = useMemo(
+    () => filteredBlockedTimes.filter(block => blockOverlapsDay(block, referenceDate)),
+    [filteredBlockedTimes, referenceDate],
+  );
+
+  const blockedEmployeeName = (block: BlockedTime) => block.employee_id
+    ? allProfiles.find(profile => profile.id === block.employee_id)?.full_name || 'Profissional'
+    : 'PetShop inteiro';
+
+  const blockedPeriod = (block: BlockedTime) => {
+    const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' };
+    return `${new Date(block.start_at).toLocaleTimeString('pt-BR', options)} às ${new Date(block.end_at).toLocaleTimeString('pt-BR', options)}`;
+  };
 
   const monthDays = useMemo(() => {
     const firstDay = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
@@ -231,6 +262,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
           <div className="grid grid-cols-7">
             {monthDays.map(day => {
               const dayAppointments = employeeAppointments.filter(item => appointmentDateKey(item.scheduled_at) === dateKey(day)).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+              const dayBlocks = filteredBlockedTimes.filter(block => blockOverlapsDay(block, day));
               const isCurrentMonth = day.getMonth() === referenceDate.getMonth();
               const isToday = dateKey(day) === dateKey(new Date());
               const isSelected = dateKey(day) === dateKey(referenceDate);
@@ -238,6 +270,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
                 <button key={dateKey(day)} onClick={() => setReferenceDate(day)} className={`min-h-24 border-b border-r border-slate-100 p-1.5 text-left align-top transition hover:bg-teal-50 dark:border-slate-800 dark:hover:bg-teal-950/20 ${isSelected ? 'bg-teal-50 ring-2 ring-inset ring-teal-500 dark:bg-teal-950/30' : ''} ${isCurrentMonth ? '' : 'bg-slate-50/70 opacity-45 dark:bg-slate-950/30'}`}>
                   <span className={`mb-1 grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${isSelected ? 'bg-teal-700 text-white' : isToday ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-300'}`}>{day.getDate()}</span>
                   <span className="space-y-1">
+                    {dayBlocks.slice(0, 1).map(block => <span key={block.id} className="block truncate rounded bg-rose-100 px-1.5 py-1 text-[9px] font-bold text-rose-800 dark:bg-rose-950 dark:text-rose-200">Bloqueado · {block.reason}</span>)}
                     {dayAppointments.slice(0, 3).map(item => <span key={item.id} className="block truncate rounded bg-teal-100 px-1.5 py-1 text-[9px] font-bold text-teal-800 dark:bg-teal-950 dark:text-teal-200">{formatTime(item.scheduled_at)} · {item.pet_name}</span>)}
                     {dayAppointments.length > 3 && <span className="block text-[9px] font-bold text-slate-500">+ {dayAppointments.length - 3} serviço(s)</span>}
                   </span>
@@ -252,15 +285,22 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
         <div className="grid gap-3 lg:grid-cols-7">
           {weekDays.map(day => {
             const count = periodAppointments.filter(item => appointmentDateKey(item.scheduled_at) === dateKey(day)).length;
+            const blockCount = filteredBlockedTimes.filter(block => blockOverlapsDay(block, day)).length;
             const isToday = dateKey(day) === dateKey(new Date());
             const isSelected = dateKey(day) === dateKey(referenceDate);
-            return <button key={dateKey(day)} onClick={() => setReferenceDate(day)} title="Selecionar dia" className={`cursor-pointer rounded-2xl border p-3 text-left transition hover:border-teal-400 ${isSelected ? 'border-teal-600 bg-teal-100 ring-2 ring-teal-200 dark:bg-teal-950/50 dark:ring-teal-900' : isToday ? 'border-teal-400 bg-teal-50 dark:bg-teal-950/30' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'}`}><span className="block text-[10px] font-bold uppercase text-slate-500">{day.toLocaleDateString('pt-BR', { weekday: 'short' })}</span><strong className="text-lg">{day.getDate()}</strong><span className="block text-[10px] text-teal-700 dark:text-teal-300">{count} serviço(s)</span></button>;
+            return <button key={dateKey(day)} onClick={() => setReferenceDate(day)} title="Selecionar dia" className={`cursor-pointer rounded-2xl border p-3 text-left transition hover:border-teal-400 ${isSelected ? 'border-teal-600 bg-teal-100 ring-2 ring-teal-200 dark:bg-teal-950/50 dark:ring-teal-900' : isToday ? 'border-teal-400 bg-teal-50 dark:bg-teal-950/30' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'}`}><span className="block text-[10px] font-bold uppercase text-slate-500">{day.toLocaleDateString('pt-BR', { weekday: 'short' })}</span><strong className="text-lg">{day.getDate()}</strong><span className="block text-[10px] text-teal-700 dark:text-teal-300">{count} serviço(s)</span>{blockCount > 0 && <span className="mt-1 block text-[9px] font-extrabold text-rose-600">Bloqueado</span>}</button>;
           })}
         </div>
       )}
 
       <div className="space-y-3">
-        {visibleAppointments.length === 0 ? (
+        {visibleBlockedTimes.map(block => (
+          <div key={block.id} className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm dark:border-rose-900 dark:bg-rose-950/30">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-200"><Ban className="h-5 w-5" /></div>
+            <div><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold text-rose-900 dark:text-rose-100">Agenda bloqueada</h3><span className="rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:bg-rose-900 dark:text-rose-100">{blockedEmployeeName(block)}</span></div><p className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-200">{block.reason}</p><p className="mt-1 text-[11px] text-slate-500">{blockedPeriod(block)}</p></div>
+          </div>
+        ))}
+        {visibleAppointments.length === 0 && visibleBlockedTimes.length === 0 ? (
           <div className="py-12 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             Nenhum agendamento encontrado neste período.
           </div>
