@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { usePetGestor } from '../../context/AppContext';
 import { Appointment, Pet } from '../../types';
 import { formatBRL, formatDate, formatTime } from '../../utils/formatters';
@@ -7,12 +7,28 @@ import { PortalRequestsPanel } from './PortalRequestsPanel';
 import { generateWhatsAppLink, buildAppointmentReminderMessage, buildPetReadyMessage } from '../../utils/whatsapp';
 import { 
   Calendar as CalendarIcon, Plus, Filter, Scissors, 
-  Clock, CheckCircle, XCircle, Phone, Dog, User, AlertTriangle, ArrowRight, ClipboardList
+  Clock, XCircle, Phone, AlertTriangle, ClipboardList, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface AppointmentsViewProps {
   initialPet?: Pet | null;
 }
+
+const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const appointmentDateKey = (value: string) => dateKey(new Date(value));
+const addDays = (date: Date, days: number) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+const startOfWeek = (date: Date) => {
+  const result = new Date(date);
+  const weekday = result.getDay() || 7;
+  result.setDate(result.getDate() - weekday + 1);
+  result.setHours(0, 0, 0, 0);
+  return result;
+};
+const monthLabel = (date: Date) => date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }) => {
   const { 
@@ -21,18 +37,64 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
   } = usePetGestor();
 
   const [viewMode, setViewMode] = useState<'diaria' | 'semanal' | 'mensal'>('diaria');
+  const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(Boolean(initialPet));
   const [cancelReasonModalApp, setCancelReasonModalApp] = useState<Appointment | null>(null);
   const [cancellationReasonText, setCancellationReasonText] = useState('');
 
-  // Filtered appointments
-  const filteredAppointments = appointments.filter(a => {
+  const employeeAppointments = appointments.filter(a => {
     if (selectedEmployeeFilter !== 'all' && a.employee_id !== selectedEmployeeFilter) {
       return false;
     }
     return true;
   });
+
+  const periodAppointments = useMemo(() => {
+    const referenceKey = dateKey(referenceDate);
+    if (viewMode === 'diaria') return employeeAppointments.filter(item => appointmentDateKey(item.scheduled_at) === referenceKey);
+    if (viewMode === 'semanal') {
+      const firstDay = startOfWeek(referenceDate);
+      const lastDay = addDays(firstDay, 6);
+      return employeeAppointments.filter(item => {
+        const key = appointmentDateKey(item.scheduled_at);
+        return key >= dateKey(firstDay) && key <= dateKey(lastDay);
+      });
+    }
+    return employeeAppointments.filter(item => {
+      const itemDate = new Date(item.scheduled_at);
+      return itemDate.getFullYear() === referenceDate.getFullYear() && itemDate.getMonth() === referenceDate.getMonth();
+    });
+  }, [employeeAppointments, referenceDate, viewMode]);
+
+  const weekDays = useMemo(() => {
+    const firstDay = startOfWeek(referenceDate);
+    return Array.from({ length: 7 }, (_, index) => addDays(firstDay, index));
+  }, [referenceDate]);
+
+  const monthDays = useMemo(() => {
+    const firstDay = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+    const gridStart = startOfWeek(firstDay);
+    return Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
+  }, [referenceDate]);
+
+  const periodTitle = useMemo(() => {
+    if (viewMode === 'diaria') return referenceDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    if (viewMode === 'semanal') {
+      const first = weekDays[0];
+      const last = weekDays[6];
+      return `${first.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} a ${last.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    }
+    return monthLabel(referenceDate);
+  }, [referenceDate, viewMode, weekDays]);
+
+  const navigatePeriod = (direction: number) => {
+    const next = new Date(referenceDate);
+    if (viewMode === 'diaria') next.setDate(next.getDate() + direction);
+    if (viewMode === 'semanal') next.setDate(next.getDate() + (7 * direction));
+    if (viewMode === 'mensal') next.setMonth(next.getMonth() + direction);
+    setReferenceDate(next);
+  };
 
   const handleGenerateComanda = async (app: Appointment) => {
     try {
@@ -136,14 +198,66 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
         </div>
       </div>
 
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => navigatePeriod(-1)} className="rounded-xl border border-slate-200 p-2 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" title="Período anterior">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button onClick={() => setReferenceDate(new Date())} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+            Hoje
+          </button>
+          <button onClick={() => navigatePeriod(1)} className="rounded-xl border border-slate-200 p-2 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" title="Próximo período">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="text-center sm:text-right">
+          <h3 className="text-sm font-extrabold capitalize text-slate-900 dark:text-white">{periodTitle}</h3>
+          <p className="text-[11px] text-slate-500">{periodAppointments.length} serviço(s) neste período</p>
+        </div>
+      </div>
+
       {/* Appointments List */}
-      <div className="space-y-3">
-        {filteredAppointments.length === 0 ? (
+      {viewMode === 'mensal' && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
+            {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => <div key={day} className="p-2 text-center text-[10px] font-extrabold uppercase text-slate-500">{day}</div>)}
+          </div>
+          <div className="grid grid-cols-7">
+            {monthDays.map(day => {
+              const dayAppointments = employeeAppointments.filter(item => appointmentDateKey(item.scheduled_at) === dateKey(day)).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+              const isCurrentMonth = day.getMonth() === referenceDate.getMonth();
+              const isToday = dateKey(day) === dateKey(new Date());
+              return (
+                <button key={dateKey(day)} onClick={() => { setReferenceDate(day); setViewMode('diaria'); }} className={`min-h-24 border-b border-r border-slate-100 p-1.5 text-left align-top transition hover:bg-teal-50 dark:border-slate-800 dark:hover:bg-teal-950/20 ${isCurrentMonth ? '' : 'bg-slate-50/70 opacity-45 dark:bg-slate-950/30'}`}>
+                  <span className={`mb-1 grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${isToday ? 'bg-teal-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}>{day.getDate()}</span>
+                  <span className="space-y-1">
+                    {dayAppointments.slice(0, 3).map(item => <span key={item.id} className="block truncate rounded bg-teal-100 px-1.5 py-1 text-[9px] font-bold text-teal-800 dark:bg-teal-950 dark:text-teal-200">{formatTime(item.scheduled_at)} · {item.pet_name}</span>)}
+                    {dayAppointments.length > 3 && <span className="block text-[9px] font-bold text-slate-500">+ {dayAppointments.length - 3} serviço(s)</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {viewMode === 'semanal' && (
+        <div className="grid gap-3 lg:grid-cols-7">
+          {weekDays.map(day => {
+            const count = periodAppointments.filter(item => appointmentDateKey(item.scheduled_at) === dateKey(day)).length;
+            const isToday = dateKey(day) === dateKey(new Date());
+            return <button key={dateKey(day)} onClick={() => { setReferenceDate(day); setViewMode('diaria'); }} className={`rounded-2xl border p-3 text-left transition hover:border-teal-400 ${isToday ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/30' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'}`}><span className="block text-[10px] font-bold uppercase text-slate-500">{day.toLocaleDateString('pt-BR', { weekday: 'short' })}</span><strong className="text-lg">{day.getDate()}</strong><span className="block text-[10px] text-teal-700 dark:text-teal-300">{count} serviço(s)</span></button>;
+          })}
+        </div>
+      )}
+
+      {viewMode !== 'mensal' && <div className="space-y-3">
+        {periodAppointments.length === 0 ? (
           <div className="py-12 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-            Nenhum agendamento encontrado para estes filtros.
+            Nenhum agendamento encontrado neste período.
           </div>
         ) : (
-          filteredAppointments.map(app => {
+          periodAppointments.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).map(app => {
             const reminderWaLink = generateWhatsAppLink(
               app.customer_phone || '',
               buildAppointmentReminderMessage(app.customer_name || 'Tutor', app.pet_name || 'Pet', formatDate(app.scheduled_at), app.service_name || 'Banho')
@@ -241,7 +355,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
             );
           })
         )}
-      </div>
+      </div>}
 
       {/* Cancellation Reason Modal */}
       {cancelReasonModalApp && (
