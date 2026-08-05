@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Customer } from '../../types';
 import { maskCPF, maskPhone, maskCEP } from '../../utils/formatters';
 import { X, User, Phone, Mail, MapPin, FileText, CheckCircle2 } from 'lucide-react';
@@ -16,8 +16,6 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!isOpen) return null;
-
   const [name, setName] = useState(customer?.name || '');
   const [cpf, setCpf] = useState(customer?.cpf || '');
   const [phone, setPhone] = useState(customer?.phone || '');
@@ -34,6 +32,57 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   const [notes, setNotes] = useState(customer?.notes || '');
   const [contactPreference, setContactPreference] = useState<'whatsapp' | 'telefone' | 'email'>(customer?.contact_preference || 'whatsapp');
   const [communicationConsent, setCommunicationConsent] = useState(customer?.communication_consent ?? true);
+  const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'success' | 'not_found' | 'error'>('idle');
+
+  useEffect(() => {
+    const cep = postalCode.replace(/\D/g, '');
+    if (cep.length !== 8) {
+      setCepStatus('idle');
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setCepStatus('loading');
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
+        if (!response.ok) throw new Error('Falha ao consultar o CEP.');
+
+        const data = await response.json() as {
+          erro?: boolean;
+          cep?: string;
+          logradouro?: string;
+          complemento?: string;
+          bairro?: string;
+          localidade?: string;
+          uf?: string;
+        };
+
+        if (data.erro) {
+          setCepStatus('not_found');
+          return;
+        }
+
+        setPostalCode(maskCEP(data.cep || cep));
+        setAddress(current => data.logradouro || current);
+        setComplement(current => current || data.complemento || '');
+        setNeighborhood(current => data.bairro || current);
+        setCity(current => data.localidade || current);
+        setState(current => data.uf || current);
+        setCepStatus('success');
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setCepStatus('error');
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [postalCode]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +178,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
+
             </div>
           </div>
 
@@ -224,6 +274,10 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   placeholder="00000-000"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
+                {cepStatus === 'loading' && <p className="mt-1 text-[10px] font-medium text-teal-600">Consultando CEP...</p>}
+                {cepStatus === 'success' && <p className="mt-1 text-[10px] font-medium text-emerald-600">Endereço localizado.</p>}
+                {cepStatus === 'not_found' && <p className="mt-1 text-[10px] font-medium text-amber-600">CEP não encontrado. Preencha o endereço manualmente.</p>}
+                {cepStatus === 'error' && <p className="mt-1 text-[10px] font-medium text-rose-600">Não foi possível consultar o CEP. Tente novamente.</p>}
               </div>
 
               <div className="sm:col-span-2">
@@ -277,6 +331,33 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Cidade
+                </label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={e => setCity(e.target.value)}
+                  placeholder="Rio de Janeiro"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Estado
+                </label>
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={state}
+                  onChange={e => setState(e.target.value.toUpperCase())}
+                  placeholder="RJ"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white uppercase"
+                />
+              </div>
             </div>
           </div>
 
@@ -305,9 +386,10 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md transition"
+              disabled={cepStatus === 'loading'}
+              className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md transition disabled:cursor-wait disabled:opacity-60"
             >
-              Salvar Cliente
+              {cepStatus === 'loading' ? 'Consultando CEP...' : 'Salvar Cliente'}
             </button>
           </div>
         </form>
