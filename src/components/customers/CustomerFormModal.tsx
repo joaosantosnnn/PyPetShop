@@ -35,6 +35,28 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'success' | 'not_found' | 'error'>('idle');
 
   useEffect(() => {
+    if (!isOpen) return;
+
+    setName(customer?.name || '');
+    setCpf(customer?.cpf || '');
+    setPhone(customer?.phone || '');
+    setWhatsapp(customer?.whatsapp || '');
+    setEmail(customer?.email || '');
+    setBirthDate(customer?.birth_date || '');
+    setPostalCode(customer?.postal_code || '');
+    setAddress(customer?.address || '');
+    setNumber(customer?.number || '');
+    setComplement(customer?.complement || '');
+    setNeighborhood(customer?.neighborhood || '');
+    setCity(customer?.city || 'São Paulo');
+    setState(customer?.state || 'SP');
+    setNotes(customer?.notes || '');
+    setContactPreference(customer?.contact_preference || 'whatsapp');
+    setCommunicationConsent(customer?.communication_consent ?? true);
+    setCepStatus('idle');
+  }, [isOpen, customer?.id]);
+
+  useEffect(() => {
     const cep = postalCode.replace(/\D/g, '');
     if (cep.length !== 8) {
       setCepStatus('idle');
