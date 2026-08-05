@@ -73,7 +73,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
   }, [referenceDate]);
 
   const visibleAppointments = useMemo(() => {
-    if (viewMode !== 'semanal') return periodAppointments;
+    if (viewMode === 'diaria') return periodAppointments;
     const selectedKey = dateKey(referenceDate);
     return periodAppointments.filter(item => appointmentDateKey(item.scheduled_at) === selectedKey);
   }, [periodAppointments, referenceDate, viewMode]);
@@ -218,7 +218,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
         </div>
         <div className="text-center sm:text-right">
           <h3 className="text-sm font-extrabold capitalize text-slate-900 dark:text-white">{periodTitle}</h3>
-          <p className="text-[11px] text-slate-500">{visibleAppointments.length} serviço(s) {viewMode === 'semanal' ? 'no dia selecionado' : 'neste período'}</p>
+          <p className="text-[11px] text-slate-500">{visibleAppointments.length} serviço(s) {viewMode === 'diaria' ? 'neste dia' : 'no dia selecionado'}</p>
         </div>
       </div>
 
@@ -233,9 +233,10 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
               const dayAppointments = employeeAppointments.filter(item => appointmentDateKey(item.scheduled_at) === dateKey(day)).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
               const isCurrentMonth = day.getMonth() === referenceDate.getMonth();
               const isToday = dateKey(day) === dateKey(new Date());
+              const isSelected = dateKey(day) === dateKey(referenceDate);
               return (
-                <button key={dateKey(day)} onClick={() => { setReferenceDate(day); setViewMode('diaria'); }} className={`min-h-24 border-b border-r border-slate-100 p-1.5 text-left align-top transition hover:bg-teal-50 dark:border-slate-800 dark:hover:bg-teal-950/20 ${isCurrentMonth ? '' : 'bg-slate-50/70 opacity-45 dark:bg-slate-950/30'}`}>
-                  <span className={`mb-1 grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${isToday ? 'bg-teal-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}>{day.getDate()}</span>
+                <button key={dateKey(day)} onClick={() => setReferenceDate(day)} className={`min-h-24 border-b border-r border-slate-100 p-1.5 text-left align-top transition hover:bg-teal-50 dark:border-slate-800 dark:hover:bg-teal-950/20 ${isSelected ? 'bg-teal-50 ring-2 ring-inset ring-teal-500 dark:bg-teal-950/30' : ''} ${isCurrentMonth ? '' : 'bg-slate-50/70 opacity-45 dark:bg-slate-950/30'}`}>
+                  <span className={`mb-1 grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${isSelected ? 'bg-teal-700 text-white' : isToday ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-300'}`}>{day.getDate()}</span>
                   <span className="space-y-1">
                     {dayAppointments.slice(0, 3).map(item => <span key={item.id} className="block truncate rounded bg-teal-100 px-1.5 py-1 text-[9px] font-bold text-teal-800 dark:bg-teal-950 dark:text-teal-200">{formatTime(item.scheduled_at)} · {item.pet_name}</span>)}
                     {dayAppointments.length > 3 && <span className="block text-[9px] font-bold text-slate-500">+ {dayAppointments.length - 3} serviço(s)</span>}
@@ -258,7 +259,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
         </div>
       )}
 
-      {viewMode !== 'mensal' && <div className="space-y-3">
+      <div className="space-y-3">
         {visibleAppointments.length === 0 ? (
           <div className="py-12 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             Nenhum agendamento encontrado neste período.
@@ -362,7 +363,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
             );
           })
         )}
-      </div>}
+      </div>
 
       {/* Cancellation Reason Modal */}
       {cancelReasonModalApp && (
