@@ -91,6 +91,7 @@ interface AppContextType {
   termAcceptances: TermAcceptance[];
   petCheckins: PetCheckin[];
   petIncidents: PetIncident[];
+  reloadData: () => Promise<void>;
   
   // Actions - Customers
   addCustomer: (customer: Omit<Customer, 'id' | 'company_id' | 'total_spent' | 'outstanding_balance'>) => Promise<Customer>;
@@ -274,6 +275,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  const reloadData = async () => {
+    if (!isSupabaseConfigured || !currentProfile.company_id) return;
+    const [data, commercial, orders, openRegister, deliveries, packages, care] = await Promise.all([
+      loadOperationalData(currentProfile.company_id), loadCommercialData(currentProfile.company_id),
+      loadServiceOrders(currentProfile.company_id), loadOpenCash(currentProfile.company_id),
+      loadDeliveryRequests(currentProfile.company_id), loadLoyaltyPackages(currentProfile.company_id),
+      loadCareData(currentProfile.company_id),
+    ]);
+    setCompany(data.company); setCustomers(data.customers); setPets(data.pets); setServices(data.services);
+    setAppointments(data.appointments); setAllProfiles(data.profiles); setProducts(commercial.products);
+    setStockMovements(commercial.stockMovements); setSales(commercial.sales); setSuppliers(commercial.suppliers);
+    setServiceOrders(orders.orders); setFinancialTransactions(orders.financialTransactions);
+    setCashRegister(openRegister || { ...initialCashRegister, status: 'fechado' });
+    setDeliveryRequests(deliveries.map(item => ({
+      ...item,
+      customer_name: data.customers.find(customer => customer.id === item.customer_id)?.name,
+      pet_name: data.pets.find(pet => pet.id === item.pet_id)?.name,
+      driver_name: data.profiles.find(profile => profile.id === item.driver_id)?.full_name,
+    })));
+    setLoyaltyPackages(packages.map(item => ({
+      ...item,
+      customer_name: data.customers.find(customer => customer.id === item.customer_id)?.name,
+      pet_name: data.pets.find(pet => pet.id === item.pet_id)?.name,
+      service_name: data.services.find(service => service.id === item.service_id)?.name,
+    })));
+    setConsentTerms(care.terms); setTermAcceptances(care.acceptances);
+    setPetCheckins(care.checkins); setPetIncidents(care.incidents);
   };
 
   // Audit Log
@@ -849,6 +879,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customers, pets, services, appointments, serviceOrders,
       products, stockMovements, sales, financialTransactions, cashRegister,
       suppliers, deliveryRequests, loyaltyPackages, consentTerms, termAcceptances, petCheckins, petIncidents,
+      reloadData,
       addCustomer, updateCustomer, toggleCustomerActive,
       addPet, updatePet,
       addService, updateService,
