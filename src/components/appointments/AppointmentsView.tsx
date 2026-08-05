@@ -72,6 +72,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
     return Array.from({ length: 7 }, (_, index) => addDays(firstDay, index));
   }, [referenceDate]);
 
+  const visibleAppointments = useMemo(() => {
+    if (viewMode !== 'semanal') return periodAppointments;
+    const selectedKey = dateKey(referenceDate);
+    return periodAppointments.filter(item => appointmentDateKey(item.scheduled_at) === selectedKey);
+  }, [periodAppointments, referenceDate, viewMode]);
+
   const monthDays = useMemo(() => {
     const firstDay = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
     const gridStart = startOfWeek(firstDay);
@@ -212,7 +218,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
         </div>
         <div className="text-center sm:text-right">
           <h3 className="text-sm font-extrabold capitalize text-slate-900 dark:text-white">{periodTitle}</h3>
-          <p className="text-[11px] text-slate-500">{periodAppointments.length} serviço(s) neste período</p>
+          <p className="text-[11px] text-slate-500">{visibleAppointments.length} serviço(s) {viewMode === 'semanal' ? 'no dia selecionado' : 'neste período'}</p>
         </div>
       </div>
 
@@ -253,12 +259,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
       )}
 
       {viewMode !== 'mensal' && <div className="space-y-3">
-        {periodAppointments.length === 0 ? (
+        {visibleAppointments.length === 0 ? (
           <div className="py-12 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             Nenhum agendamento encontrado neste período.
           </div>
         ) : (
-          periodAppointments.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).map(app => {
+          [...visibleAppointments].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).map(app => {
             const reminderWaLink = generateWhatsAppLink(
               app.customer_phone || '',
               buildAppointmentReminderMessage(app.customer_name || 'Tutor', app.pet_name || 'Pet', formatDate(app.scheduled_at), app.service_name || 'Banho')
