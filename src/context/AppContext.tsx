@@ -310,24 +310,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
     setCustomers(prev => [newCust, ...prev]);
-    insertCustomer(newCust).catch(() => {
-      setCustomers(prev => prev.filter(item => item.id !== newCust.id));
-      addToast(`Não foi possível cadastrar ${newCust.name}.`, 'error');
-    });
-    addToast(`Cliente ${newCust.name} cadastrado(a) com sucesso!`, 'success');
-    logAudit('Novo Cliente', 'Cliente', newCust.id, newCust.name);
+    insertCustomer(newCust)
+      .then(saved => {
+        setCustomers(prev => prev.map(item => item.id === newCust.id ? saved : item));
+        addToast(`Cliente ${saved.name} cadastrado(a) com sucesso!`, 'success');
+        logAudit('Novo Cliente', 'Cliente', saved.id, saved.name);
+      })
+      .catch(() => {
+        setCustomers(prev => prev.filter(item => item.id !== newCust.id));
+        addToast(`Não foi possível cadastrar ${newCust.name}.`, 'error');
+      });
     return newCust;
   };
 
   const updateCustomer = (updated: Customer) => {
     const previous = customers.find(item => item.id === updated.id);
     setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
-    saveCustomer(updated).catch(() => {
-      if (previous) setCustomers(prev => prev.map(item => item.id === previous.id ? previous : item));
-      addToast(`Não foi possível atualizar ${updated.name}.`, 'error');
-    });
-    addToast(`Cliente ${updated.name} atualizado(a)!`, 'success');
-    logAudit('Edição de Cliente', 'Cliente', updated.id, updated.name);
+    saveCustomer(updated)
+      .then(saved => {
+        setCustomers(prev => prev.map(item => item.id === saved.id ? saved : item));
+        addToast(`Cliente ${saved.name} atualizado(a)!`, 'success');
+        logAudit('Edição de Cliente', 'Cliente', saved.id, saved.name);
+      })
+      .catch(() => {
+        if (previous) setCustomers(prev => prev.map(item => item.id === previous.id ? previous : item));
+        addToast(`Não foi possível atualizar ${updated.name}.`, 'error');
+      });
   };
 
   const toggleCustomerActive = (id: string) => {
