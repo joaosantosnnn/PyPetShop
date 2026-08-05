@@ -97,7 +97,8 @@ export async function saveCustomer(customer: Customer) {
 
 export async function insertPet(pet: Pet) {
   const { customer_name: _customerName, photo_url: currentPhotoUrl, ...values } = pet;
-  const row = pet.photo_path ? { ...values, photo_url: null } : { ...values, photo_url: currentPhotoUrl };
+  const normalized = { ...values, birth_date: values.birth_date?.trim() || null };
+  const row = pet.photo_path ? { ...normalized, photo_url: null } : { ...normalized, photo_url: currentPhotoUrl };
   const { data, error } = await supabase.from('pets').insert(row).select().single();
   fail(error);
   return { ...(data as Pet), customer_name: pet.customer_name, photo_url: pet.photo_url };
@@ -105,7 +106,8 @@ export async function insertPet(pet: Pet) {
 
 export async function savePet(pet: Pet) {
   const { id, company_id, customer_name: _customerName, photo_url: currentPhotoUrl, ...values } = pet;
-  const changes = pet.photo_path ? { ...values, photo_url: null } : { ...values, photo_url: currentPhotoUrl };
+  const normalized = { ...values, birth_date: values.birth_date?.trim() || null };
+  const changes = pet.photo_path ? { ...normalized, photo_url: null } : { ...normalized, photo_url: currentPhotoUrl };
   const { data, error } = await supabase.from('pets').update(changes).eq('id', id).eq('company_id', company_id).select().single();
   fail(error);
   return { ...(data as Pet), customer_name: pet.customer_name, photo_url: pet.photo_url };
