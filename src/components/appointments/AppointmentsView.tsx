@@ -246,7 +246,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
           {weekDays.map(day => {
             const count = periodAppointments.filter(item => appointmentDateKey(item.scheduled_at) === dateKey(day)).length;
             const isToday = dateKey(day) === dateKey(new Date());
-            return <button key={dateKey(day)} onClick={() => { setReferenceDate(day); setViewMode('diaria'); }} className={`rounded-2xl border p-3 text-left transition hover:border-teal-400 ${isToday ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/30' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'}`}><span className="block text-[10px] font-bold uppercase text-slate-500">{day.toLocaleDateString('pt-BR', { weekday: 'short' })}</span><strong className="text-lg">{day.getDate()}</strong><span className="block text-[10px] text-teal-700 dark:text-teal-300">{count} serviço(s)</span></button>;
+            return <button key={dateKey(day)} onClick={() => { if (count > 0) { setReferenceDate(day); setViewMode('diaria'); } }} aria-disabled={count === 0} title={count > 0 ? 'Abrir agenda diária' : 'Nenhum serviço agendado'} className={`rounded-2xl border p-3 text-left transition ${count > 0 ? 'cursor-pointer hover:border-teal-400' : 'cursor-default'} ${isToday ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/30' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'}`}><span className="block text-[10px] font-bold uppercase text-slate-500">{day.toLocaleDateString('pt-BR', { weekday: 'short' })}</span><strong className="text-lg">{day.getDate()}</strong><span className="block text-[10px] text-teal-700 dark:text-teal-300">{count} serviço(s)</span></button>;
           })}
         </div>
       )}
