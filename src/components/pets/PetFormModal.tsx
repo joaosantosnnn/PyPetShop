@@ -17,9 +17,11 @@ export const PetFormModal: React.FC<PetFormModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const { customers, company, addToast } = usePetGestor();
+  const { customers, company, addToast, addCustomer } = usePetGestor();
 
-  const [customerId, setCustomerId] = useState(pet?.customer_id || (customers[0]?.id || ''));
+  const initialCustomer = customers.find(customer => customer.id === pet?.customer_id);
+  const [customerId, setCustomerId] = useState(pet?.customer_id || '');
+  const [customerSearch, setCustomerSearch] = useState(initialCustomer?.name || pet?.customer_name || '');
   const [name, setName] = useState(pet?.name || '');
   const [photoUrl, setPhotoUrl] = useState(pet?.photo_url || '');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -56,14 +58,26 @@ export const PetFormModal: React.FC<PetFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !customerId) return;
+    const typedCustomerName = customerSearch.trim();
+    if (!name.trim() || !typedCustomerName) return;
 
-    const selectedCust = customers.find(c => c.id === customerId);
     setSaving(true);
     try {
+      let selectedCust = customers.find(customer => customer.id === customerId)
+        || customers.find(customer => customer.name.trim().toLocaleLowerCase('pt-BR') === typedCustomerName.toLocaleLowerCase('pt-BR'));
+
+      if (!selectedCust) {
+        selectedCust = await addCustomer({
+          name: typedCustomerName,
+          contact_preference: 'whatsapp',
+          communication_consent: false,
+          is_active: true,
+        });
+      }
+
       const uploaded = photoFile ? await uploadPetPhoto(photoFile, company.id) : null;
       onSave({
-        ...(pet || {}), customer_id: customerId, customer_name: selectedCust?.name || '', name,
+        ...(pet || {}), customer_id: selectedCust.id, customer_name: selectedCust.name, name,
         photo_url: uploaded?.signedUrl || photoUrl || undefined,
         photo_path: uploaded?.path || pet?.photo_path,
         species, breed, gender, birth_date: birthDate,
@@ -74,7 +88,7 @@ export const PetFormModal: React.FC<PetFormModalProps> = ({
       });
       onClose();
     } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Não foi possível enviar a foto.', 'error');
+      addToast(error instanceof Error ? error.message : 'Não foi possível salvar o pet.', 'error');
     } finally { setSaving(false); }
   };
 
@@ -107,16 +121,28 @@ export const PetFormModal: React.FC<PetFormModalProps> = ({
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Tutor Responsável *
               </label>
-              <select
+              <input
+                type="text"
                 required
-                value={customerId}
-                onChange={e => setCustomerId(e.target.value)}
+                list="pet-customer-options"
+                value={customerSearch}
+                onChange={e => {
+                  const value = e.target.value;
+                  const match = customers.find(customer => customer.name.trim().toLocaleLowerCase('pt-BR') === value.trim().toLocaleLowerCase('pt-BR'));
+                  setCustomerSearch(value);
+                  setCustomerId(match?.id || '');
+                }}
+                placeholder="Digite para buscar ou cadastrar um tutor"
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-              >
+              />
+              <datalist id="pet-customer-options">
                 {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.phone || 'Sem tel'})</option>
+                  <option key={c.id} value={c.name}>{c.phone || 'Sem telefone'}</option>
                 ))}
-              </select>
+              </datalist>
+              <p className="mt-1 text-[10px] text-slate-500">
+                Se o nome não existir, o tutor será cadastrado automaticamente.
+              </p>
             </div>
 
             <div>
