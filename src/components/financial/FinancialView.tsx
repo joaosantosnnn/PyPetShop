@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays, Plus, Save, Settings, TrendingUp, WalletCards } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, CalendarDays, Plus, Save, TrendingUp, WalletCards } from 'lucide-react';
 import { usePetGestor } from '../../context/AppContext';
 import type { FinancialTransaction } from '../../types';
 import { formatBRL, formatDate } from '../../utils/formatters';
 import { fallbackFinancialPaymentMethods, loadFinancialPaymentMethods, saveFinancialPaymentMethods, type FinancialPaymentMethod } from '../../services/financialRepository';
-import { ReportsView } from '../reports/ReportsView';
 import { PixPaymentsPanel } from './PixPaymentsPanel';
 import { PixReceiptsPanel } from './PixReceiptsPanel';
 import { RefundsPanel } from './RefundsPanel';
 import { CashHistoryPanel } from './CashHistoryPanel';
 
-type Tab = 'movements' | 'cashflow' | 'reports' | 'settings';
+type Tab = 'movements' | 'cashflow' | 'settings';
+type MovementKind = 'all' | 'in' | 'out';
 type Period = 'day' | 'week' | 'month' | 'year';
 const periodLabels: Record<Period, string> = { day: 'Diária', week: 'Semanal', month: 'Mensal', year: 'Anual' };
 const iso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -33,11 +33,11 @@ function PeriodPicker({ period, setPeriod, anchor, setAnchor }: { period: Period
   </div>;
 }
 
-export const FinancialView: React.FC = () => {
+export const FinancialView: React.FC<{ initialTab?: Tab; initialMovementKind?: MovementKind }> = ({ initialTab = 'movements', initialMovementKind = 'all' }) => {
   const { company, currentProfile, financialTransactions, addFinancialTransaction, cashRegister, openCashRegister, closeCashRegister, registerCashMovement, addToast } = usePetGestor();
-  const [tab, setTab] = useState<Tab>('movements'); const [period, setPeriod] = useState<Period>('month'); const [anchor, setAnchor] = useState(iso(new Date()));
+  const tab = initialTab; const [period, setPeriod] = useState<Period>('month'); const [anchor, setAnchor] = useState(iso(new Date()));
   const [modal, setModal] = useState(false); const [description, setDescription] = useState(''); const [amount, setAmount] = useState(0);
-  const [type, setType] = useState<'receita' | 'despesa'>('receita'); const [category, setCategory] = useState('Outros');
+  const [type, setType] = useState<'receita' | 'despesa'>(initialMovementKind === 'out' ? 'despesa' : 'receita'); const [category, setCategory] = useState('Outros');
   const [dueDate, setDueDate] = useState(iso(new Date())); const [paymentMethod, setPaymentMethod] = useState('pix'); const [status, setStatus] = useState<'pago' | 'pendente'>('pago');
   const [paymentMethods, setPaymentMethods] = useState<FinancialPaymentMethod[]>([]);
   useEffect(() => { loadFinancialPaymentMethods(company.id).then(setPaymentMethods).catch(() => setPaymentMethods(fallbackFinancialPaymentMethods(company.id))); }, [company.id]);
@@ -47,23 +47,17 @@ export const FinancialView: React.FC = () => {
   const scoped = useMemo(() => financialTransactions.filter(item => { const date = transactionDate(item); return date >= range.start && date <= range.end && item.status !== 'cancelado'; }), [financialTransactions, range]);
   const inflow = scoped.filter(item => item.type === 'receita' || item.type === 'suprimento').reduce((sum, item) => sum + Number(item.amount), 0);
   const outflow = scoped.filter(item => item.type === 'despesa' || item.type === 'sangria').reduce((sum, item) => sum + Number(item.amount), 0);
-  const canViewReports = ['proprietario','administrador','gerente'].includes(currentProfile.role);
   const canConfigure = ['proprietario','administrador'].includes(currentProfile.role);
-  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: 'movements', label: 'Entradas e saídas', icon: WalletCards }, { id: 'cashflow', label: 'Fluxo de caixa', icon: TrendingUp },
-    ...(canViewReports ? [{ id: 'reports' as Tab, label: 'Relatórios', icon: BarChart3 }] : []),
-    ...(canConfigure ? [{ id: 'settings' as Tab, label: 'Configurações', icon: Settings }] : []),
-  ];
+  const pageTitle = initialMovementKind === 'in' ? 'Entradas' : initialMovementKind === 'out' ? 'Saídas' : tab === 'cashflow' ? 'Fluxo de Caixa' : tab === 'settings' ? 'Configurações Financeiras' : 'Financeiro';
+  const openTransactionModal = () => { if (initialMovementKind === 'in') setType('receita'); if (initialMovementKind === 'out') setType('despesa'); setModal(true); };
   const add = (event: React.FormEvent) => { event.preventDefault(); if (!description.trim() || amount <= 0 || !activePaymentMethods.some(method => method.code === paymentMethod)) return;
     addFinancialTransaction({ description: description.trim(), amount, type, category, due_date: dueDate, payment_date: status === 'pago' ? dueDate : undefined, status, payment_method: paymentMethod as any });
     setDescription(''); setAmount(0); setModal(false); addToast('Lançamento financeiro salvo.', 'success');
   };
   return <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-    <header><h2 className="flex items-center gap-2 text-xl font-bold"><TrendingUp className="h-6 w-6 text-teal-600"/>Financeiro</h2><p className="text-xs text-slate-500">Entradas, saídas, fluxo de caixa, relatórios e recebimentos em um só lugar.</p></header>
-    <nav className="flex gap-2 overflow-x-auto border-b pb-2">{tabs.map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => setTab(item.id)} className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold ${tab === item.id ? 'bg-teal-600 text-white' : 'border bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300'}`}><Icon className="h-4 w-4"/>{item.label}</button>; })}</nav>
-    {tab === 'movements' && <MovementsTab {...{ scoped, inflow, outflow, period, setPeriod, anchor, setAnchor, setModal }} />}
+    <header><h2 className="flex items-center gap-2 text-xl font-bold"><WalletCards className="h-6 w-6 text-teal-600"/>{pageTitle}</h2><p className="text-xs text-slate-500">Acompanhe e gerencie os dados financeiros do período selecionado.</p></header>
+    {tab === 'movements' && <MovementsTab {...{ scoped, inflow, outflow, period, setPeriod, anchor, setAnchor }} initialKind={initialMovementKind} openModal={openTransactionModal} />}
     {tab === 'cashflow' && <CashFlowTab {...{ scoped, inflow, outflow, period, setPeriod, anchor, setAnchor, cashRegister, openCashRegister, closeCashRegister, registerCashMovement }} />}
-    {tab === 'reports' && <div className="-m-4 sm:-m-6"><ReportsView /></div>}
     {tab === 'settings' && canConfigure && <SettingsTab methods={paymentMethods} setMethods={setPaymentMethods} addToast={addToast}/>}
     {modal && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/60 p-4"><form onSubmit={add} className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 text-xs shadow-2xl dark:bg-slate-900"><h3 className="text-base font-bold">Novo lançamento</h3>
       <label className="block font-semibold">Descrição<input required value={description} onChange={e => setDescription(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2"/></label>
@@ -80,9 +74,10 @@ function Summary({ inflow, outflow }: { inflow: number; outflow: number }) { con
   ['Entradas', inflow, 'text-emerald-600', ArrowUpRight], ['Saídas', outflow, 'text-rose-600', ArrowDownRight], ['Saldo do período', result, result >= 0 ? 'text-teal-600' : 'text-rose-600', TrendingUp],
 ].map(([label, value, tone, Icon]: any) => <div key={label} className="flex items-center justify-between rounded-2xl border bg-white p-5 dark:bg-slate-900"><div><span className="text-[11px] font-bold uppercase text-slate-400">{label}</span><b className={`mt-1 block text-2xl ${tone}`}>{formatBRL(value)}</b></div><Icon className={`h-6 w-6 ${tone}`}/></div>)}</div>; }
 
-function MovementsTab({ scoped, inflow, outflow, period, setPeriod, anchor, setAnchor, setModal }: any) { const [kind, setKind] = useState<'all'|'in'|'out'>('all'); const rows = scoped.filter((item: FinancialTransaction) => kind === 'all' || (kind === 'in' ? ['receita','suprimento'].includes(item.type) : ['despesa','sangria'].includes(item.type)));
-  return <section className="space-y-4"><div className="flex flex-col justify-between gap-3 lg:flex-row"><PeriodPicker {...{period,setPeriod,anchor,setAnchor}}/><button onClick={() => setModal(true)} className="flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white"><Plus className="h-4 w-4"/>Novo lançamento</button></div><Summary {...{inflow,outflow}}/>
-    <div className="overflow-hidden rounded-2xl border bg-white dark:bg-slate-900"><div className="flex items-center justify-between border-b p-4"><h3 className="text-sm font-bold">Movimentações do período</h3><select value={kind} onChange={e => setKind(e.target.value as any)} className="rounded-lg border px-2 py-1 text-xs"><option value="all">Todas</option><option value="in">Entradas</option><option value="out">Saídas</option></select></div><div className="divide-y">{rows.length ? rows.map((item: FinancialTransaction) => { const incoming = ['receita','suprimento'].includes(item.type); return <div key={item.id} className="flex items-center justify-between gap-3 p-4 text-xs"><div><b>{item.description}</b><p className="text-[11px] text-slate-500">{item.category} · {formatDate(transactionDate(item))} · {item.payment_method?.replaceAll('_',' ') || 'Não informado'}</p></div><div className="text-right"><b className={incoming ? 'text-emerald-600' : 'text-rose-600'}>{incoming ? '+' : '-'} {formatBRL(Number(item.amount))}</b><small className="block uppercase text-slate-400">{item.status}</small></div></div>; }) : <p className="p-8 text-center text-xs text-slate-500">Nenhuma movimentação neste período.</p>}</div></div>
+function MovementsTab({ scoped, inflow, outflow, period, setPeriod, anchor, setAnchor, initialKind, openModal }: any) { const [kind, setKind] = useState<MovementKind>(initialKind); const rows = scoped.filter((item: FinancialTransaction) => kind === 'all' || (kind === 'in' ? ['receita','suprimento'].includes(item.type) : ['despesa','sangria'].includes(item.type)));
+  const shownInflow = kind === 'out' ? 0 : inflow; const shownOutflow = kind === 'in' ? 0 : outflow;
+  return <section className="space-y-4"><div className="flex flex-col justify-between gap-3 lg:flex-row"><PeriodPicker {...{period,setPeriod,anchor,setAnchor}}/><button onClick={openModal} className="flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white"><Plus className="h-4 w-4"/>{kind === 'out' ? 'Nova saída' : 'Nova entrada'}</button></div><Summary inflow={shownInflow} outflow={shownOutflow}/>
+    <div className="overflow-hidden rounded-2xl border bg-white dark:bg-slate-900"><div className="flex items-center justify-between border-b p-4"><h3 className="text-sm font-bold">{kind === 'in' ? 'Entradas do período' : kind === 'out' ? 'Saídas do período' : 'Movimentações do período'}</h3>{initialKind === 'all' && <select value={kind} onChange={e => setKind(e.target.value as MovementKind)} className="rounded-lg border px-2 py-1 text-xs"><option value="all">Todas</option><option value="in">Entradas</option><option value="out">Saídas</option></select>}</div><div className="divide-y">{rows.length ? rows.map((item: FinancialTransaction) => { const incoming = ['receita','suprimento'].includes(item.type); return <div key={item.id} className="flex items-center justify-between gap-3 p-4 text-xs"><div><b>{item.description}</b><p className="text-[11px] text-slate-500">{item.category} · {formatDate(transactionDate(item))} · {item.payment_method?.replaceAll('_',' ') || 'Não informado'}</p></div><div className="text-right"><b className={incoming ? 'text-emerald-600' : 'text-rose-600'}>{incoming ? '+' : '-'} {formatBRL(Number(item.amount))}</b><small className="block uppercase text-slate-400">{item.status}</small></div></div>; }) : <p className="p-8 text-center text-xs text-slate-500">Nenhuma movimentação neste período.</p>}</div></div>
   </section>; }
 
 function CashFlowTab({ scoped, inflow, outflow, period, setPeriod, anchor, setAnchor, cashRegister, openCashRegister, closeCashRegister, registerCashMovement }: any) { const paid = scoped.filter((item: FinancialTransaction) => item.status === 'pago'); const points = useMemo(() => { const map = new Map<string,{name:string;Entradas:number;Saídas:number}>(); paid.forEach((item: FinancialTransaction) => { const date = parseDate(transactionDate(item)); const key = period === 'year' ? `${date.getFullYear()}-${date.getMonth()}` : iso(date); const name = period === 'year' ? date.toLocaleDateString('pt-BR',{month:'short'}) : date.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); const point = map.get(key) || {name,Entradas:0,Saídas:0}; if (['receita','suprimento'].includes(item.type)) point.Entradas += Number(item.amount); else point.Saídas += Number(item.amount); map.set(key,point); }); return [...map.entries()].sort(([a],[b]) => a.localeCompare(b)).map(([,value]) => value); }, [paid,period]);
