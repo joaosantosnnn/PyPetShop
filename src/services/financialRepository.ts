@@ -11,6 +11,21 @@ export interface FinancialPaymentMethod {
   display_order: number;
 }
 
+export const defaultFinancialPaymentMethods = [
+  { code: 'dinheiro', name: 'Dinheiro' },
+  { code: 'pix', name: 'Pix' },
+  { code: 'cartao_debito', name: 'Cartão de débito' },
+  { code: 'cartao_credito', name: 'Cartão de crédito' },
+  { code: 'fiado', name: 'Fiado' },
+  { code: 'saldo_credito', name: 'Saldo de crédito' },
+] as const;
+
+export const fallbackFinancialPaymentMethods = (companyId: string): FinancialPaymentMethod[] =>
+  defaultFinancialPaymentMethods.map((method, index) => ({
+    ...method, company_id: companyId, is_active: true, fee_percentage: 0,
+    settlement_days: 0, display_order: index + 1,
+  }));
+
 const fail = (error: { message: string } | null) => {
   if (error) throw new Error(error.message);
 };
