@@ -8,16 +8,18 @@ import {
 } from 'lucide-react';
 import { loadCustomerCreditBalance } from '../../services/refundRepository';
 import { canPerform } from '../../utils/permissions';
+import { fallbackFinancialPaymentMethods, loadFinancialPaymentMethods, type FinancialPaymentMethod } from '../../services/financialRepository';
 
 export const ComandasView: React.FC = () => {
   const { 
     serviceOrders, products, services, 
-    addServiceOrderItem, finalizeServiceOrder,currentProfile,
+    addServiceOrderItem, finalizeServiceOrder,currentProfile,company,
   } = usePetGestor();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSO, setSelectedSO] = useState<ServiceOrder | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'saldo_credito'>('pix');
+  const [paymentMethods, setPaymentMethods] = useState<FinancialPaymentMethod[]>([]);
   const [itemOrder, setItemOrder] = useState<ServiceOrder | null>(null);
   const [itemType, setItemType] = useState<'service' | 'product' | 'internal_consumption'>('product');
   const [itemId, setItemId] = useState('');
@@ -35,6 +37,14 @@ export const ComandasView: React.FC = () => {
   useEffect(() => {
     if (selectedSO && paymentMethod==='saldo_credito') setPaymentAmount(Math.min(creditBalance,selectedSO.total-selectedSO.paid_amount));
   }, [paymentMethod,creditBalance,selectedSO]);
+
+  useEffect(() => {
+    loadFinancialPaymentMethods(company.id).then(rows => {
+      const accepted = rows.filter(row => row.is_active && ['pix','dinheiro','cartao_credito','cartao_debito','saldo_credito'].includes(row.code));
+      setPaymentMethods(accepted);
+      if (accepted.length && !accepted.some(row => row.code === paymentMethod)) setPaymentMethod(accepted[0].code as typeof paymentMethod);
+    }).catch(() => setPaymentMethods(fallbackFinancialPaymentMethods(company.id).filter(row => ['pix','dinheiro','cartao_credito','cartao_debito','saldo_credito'].includes(row.code))));
+  }, [company.id]);
 
   const filteredOrders = serviceOrders.filter(so => {
     const term = searchTerm.toLowerCase();
@@ -205,11 +215,7 @@ export const ComandasView: React.FC = () => {
                 onChange={e => setPaymentMethod(e.target.value as any)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
               >
-                <option value="pix">PIX Instantâneo</option>
-                <option value="cartao_debito">Cartão de Débito</option>
-                <option value="cartao_credito">Cartão de Crédito</option>
-                <option value="dinheiro">Dinheiro em Espécie</option>
-                <option value="saldo_credito">Saldo de crédito do cliente</option>
+                {paymentMethods.map(method => <option key={method.code} value={method.code}>{method.name}</option>)}
               </select>
             </div>
 
@@ -231,7 +237,7 @@ export const ComandasView: React.FC = () => {
                 Cancelar
               </button>
               <button
-                disabled={paymentAmount<=0 || paymentAmount>selectedSO.total-selectedSO.paid_amount || (paymentMethod==='saldo_credito' && paymentAmount>creditBalance)}
+                disabled={!paymentMethods.length || paymentAmount<=0 || paymentAmount>selectedSO.total-selectedSO.paid_amount || (paymentMethod==='saldo_credito' && paymentAmount>creditBalance)}
                 onClick={async () => { try { await finalizeServiceOrder(selectedSO.id, paymentMethod, paymentAmount); setSelectedSO(null); } catch {} }}
                 className="px-5 py-2 bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md"
               >

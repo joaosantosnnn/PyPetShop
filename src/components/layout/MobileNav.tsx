@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { usePetGestor, AppView } from '../../context/AppContext';
 import {
   LayoutDashboard, Calendar, Scissors, ShoppingCart, Menu, X, Dog, Users,
-  Sparkles, Package, DollarSign, Truck, Settings, FileText, BarChart3, UserCheck,
+  Sparkles, Package, DollarSign, Truck, Settings, FileText, UserCheck,
   HeartHandshake, ClipboardList, ShieldAlert, CalendarOff, MessageCircle,
   DatabaseBackup, ChevronDown, BriefcaseBusiness, ContactRound, Boxes,
   BadgeDollarSign, Wrench,
@@ -40,7 +40,7 @@ export const MobileNav: React.FC = () => {
       { id: 'purchases', label: 'Pedidos de Compra', icon: ClipboardList },
     ] },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign, items: [
-      { id: 'financial', label: 'Fluxo de Caixa', icon: DollarSign }, { id: 'reports', label: 'Relatórios', icon: BarChart3 },
+      { id: 'financial', label: 'Gestão Financeira', icon: DollarSign },
     ] },
     { id: 'administracao', label: 'Administração', icon: Wrench, items: [
       { id: 'employees', label: 'Funcionários & Comissões', icon: UserCheck }, { id: 'audit', label: 'Auditoria', icon: ShieldAlert },
