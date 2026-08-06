@@ -7,9 +7,10 @@ import {
   Minus, DollarSign, CreditCard, QrCode, User, CheckCircle2, Printer
 } from 'lucide-react';
 import { loadCustomerCreditBalance } from '../../services/refundRepository';
+import { fallbackFinancialPaymentMethods, loadFinancialPaymentMethods, type FinancialPaymentMethod } from '../../services/financialRepository';
 
 export const POSView: React.FC = () => {
-  const { products, services, customers, sales, recordSale, cancelSale } = usePetGestor();
+  const { company, products, services, customers, sales, recordSale, cancelSale } = usePetGestor();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
@@ -27,6 +28,7 @@ export const POSView: React.FC = () => {
 
   const [discount, setDiscount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito'>('pix');
+  const [paymentMethods, setPaymentMethods] = useState<FinancialPaymentMethod[]>([]);
   const [creditBalance, setCreditBalance] = useState(0);
   const [useCredit, setUseCredit] = useState(false);
   const [creditAmount, setCreditAmount] = useState(0);
@@ -39,6 +41,14 @@ export const POSView: React.FC = () => {
     if (!selectedCustomerId) { setCreditBalance(0); return; }
     loadCustomerCreditBalance(selectedCustomerId).then(setCreditBalance).catch(() => setCreditBalance(0));
   }, [selectedCustomerId]);
+
+  useEffect(() => {
+    loadFinancialPaymentMethods(company.id).then(rows => {
+      const accepted = rows.filter(row => row.is_active && ['pix','dinheiro','cartao_credito','cartao_debito'].includes(row.code));
+      setPaymentMethods(accepted);
+      if (accepted.length && !accepted.some(row => row.code === paymentMethod)) setPaymentMethod(accepted[0].code as typeof paymentMethod);
+    }).catch(() => setPaymentMethods(fallbackFinancialPaymentMethods(company.id).filter(row => ['pix','dinheiro','cartao_credito','cartao_debito'].includes(row.code))));
+  }, [company.id]);
 
   // Filter products for catalog
   const filteredProducts = products.filter(p => {
@@ -99,7 +109,7 @@ export const POSView: React.FC = () => {
   const changeAmount = paymentMethod === 'dinheiro' ? Math.max(0, amountPaid - complementaryAmount) : 0;
 
   const handleFinalizeSale = async () => {
-    if (cartItems.length === 0) return;
+    if (cartItems.length === 0 || paymentMethods.length === 0) return;
 
     const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
@@ -301,12 +311,9 @@ export const POSView: React.FC = () => {
             <div>
               <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">Método de Pagamento</label>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
-                {[
-                  { id: 'pix', label: 'PIX', icon: QrCode },
-                  { id: 'cartao_debito', label: 'Débito', icon: CreditCard },
-                  { id: 'cartao_credito', label: 'Crédito', icon: CreditCard },
-                  { id: 'dinheiro', label: 'Dinheiro', icon: DollarSign },
-                ].map(m => (
+                {paymentMethods.map(method => {
+                  const m = { id: method.code, label: method.name, icon: method.code === 'pix' ? QrCode : method.code === 'dinheiro' ? DollarSign : CreditCard };
+                  return (
                   <button
                     key={m.id}
                     onClick={() => setPaymentMethod(m.id as any)}
@@ -318,7 +325,8 @@ export const POSView: React.FC = () => {
                   >
                     <m.icon className="w-3.5 h-3.5" /> {m.label}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -354,7 +362,7 @@ export const POSView: React.FC = () => {
             )}
 
             <button
-              disabled={cartItems.length === 0 || isFinalizing || (useCredit && (!selectedCustomerId || creditAmount<=0 || creditAmount>creditBalance || creditAmount>finalTotal)) || (paymentMethod==='dinheiro' && complementaryAmount>0 && amountPaid<complementaryAmount)}
+              disabled={cartItems.length === 0 || paymentMethods.length === 0 || isFinalizing || (useCredit && (!selectedCustomerId || creditAmount<=0 || creditAmount>creditBalance || creditAmount>finalTotal)) || (paymentMethod==='dinheiro' && complementaryAmount>0 && amountPaid<complementaryAmount)}
               onClick={handleFinalizeSale}
               className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm shadow-md transition"
             >
