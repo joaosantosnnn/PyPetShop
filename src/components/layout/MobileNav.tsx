@@ -5,7 +5,7 @@ import {
   Sparkles, Package, DollarSign, Truck, Settings, FileText, UserCheck,
   HeartHandshake, ClipboardList, ShieldAlert, CalendarOff, MessageCircle,
   DatabaseBackup, ChevronDown, BriefcaseBusiness, ContactRound, Boxes,
-  BadgeDollarSign, Wrench,
+  BadgeDollarSign, Wrench, TrendingUp, TrendingDown, BarChart3,
 } from 'lucide-react';
 import { canAccessView } from '../../utils/permissions';
 
@@ -40,7 +40,11 @@ export const MobileNav: React.FC = () => {
       { id: 'purchases', label: 'Pedidos de Compra', icon: ClipboardList },
     ] },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign, items: [
-      { id: 'financial', label: 'Gestão Financeira', icon: DollarSign },
+      { id: 'financial-entries', label: 'Entradas', icon: TrendingUp },
+      { id: 'financial-expenses', label: 'Saídas', icon: TrendingDown },
+      { id: 'cash-flow', label: 'Fluxo de Caixa', icon: DollarSign },
+      { id: 'reports', label: 'Relatórios', icon: BarChart3 },
+      { id: 'financial-settings', label: 'Configurações', icon: Settings },
     ] },
     { id: 'administracao', label: 'Administração', icon: Wrench, items: [
       { id: 'employees', label: 'Funcionários & Comissões', icon: UserCheck }, { id: 'audit', label: 'Auditoria', icon: ShieldAlert },

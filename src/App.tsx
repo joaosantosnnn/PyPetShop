@@ -69,7 +69,14 @@ const MainLayout: React.FC = () => {
       case 'purchases':
         return <PurchasesView />;
       case 'financial':
-        return <FinancialView />;
+      case 'financial-entries':
+        return <FinancialView initialTab="movements" initialMovementKind="in" />;
+      case 'financial-expenses':
+        return <FinancialView initialTab="movements" initialMovementKind="out" />;
+      case 'cash-flow':
+        return <FinancialView initialTab="cashflow" />;
+      case 'financial-settings':
+        return <FinancialView initialTab="settings" />;
       case 'employees':
         return <EmployeesView />;
       case 'delivery':
