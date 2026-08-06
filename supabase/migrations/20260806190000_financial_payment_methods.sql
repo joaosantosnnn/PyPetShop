@@ -1,7 +1,7 @@
 -- Formas de recebimento configuráveis por empresa.
 begin;
 
-create table public.financial_payment_methods (
+create table if not exists public.financial_payment_methods (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
   code text not null check (code ~ '^[a-z0-9_]+$'),
@@ -15,11 +15,15 @@ create table public.financial_payment_methods (
   unique (company_id, code)
 );
 
-create index financial_payment_methods_company_idx on public.financial_payment_methods (company_id, display_order);
+create index if not exists financial_payment_methods_company_idx on public.financial_payment_methods (company_id, display_order);
+drop trigger if exists financial_payment_methods_updated_at on public.financial_payment_methods;
 create trigger financial_payment_methods_updated_at before update on public.financial_payment_methods
 for each row execute function private.set_updated_at();
 alter table public.financial_payment_methods enable row level security;
 
+drop policy if exists financial_payment_methods_select on public.financial_payment_methods;
+drop policy if exists financial_payment_methods_insert on public.financial_payment_methods;
+drop policy if exists financial_payment_methods_update on public.financial_payment_methods;
 create policy financial_payment_methods_select on public.financial_payment_methods for select to authenticated
 using ((select private.has_company_role(company_id, array['proprietario','administrador','gerente','caixa'])));
 create policy financial_payment_methods_insert on public.financial_payment_methods for insert to authenticated
