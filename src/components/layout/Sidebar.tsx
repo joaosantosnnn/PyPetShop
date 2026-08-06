@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Scissors, ClipboardList, ShoppingCart, Users, Dog,
   Sparkles, Package, Truck, DollarSign, UserCheck, HeartHandshake, FileText,
   ShieldAlert, Settings, CalendarOff, MessageCircle, DatabaseBackup,
-  ChevronDown, BriefcaseBusiness, ContactRound, Boxes, BadgeDollarSign, Wrench,
+  ChevronDown, BriefcaseBusiness, ContactRound, Boxes, BadgeDollarSign, Wrench, TrendingUp, TrendingDown, BarChart3,
 } from 'lucide-react';
 import { canAccessView } from '../../utils/permissions';
 
@@ -46,7 +46,11 @@ export const Sidebar: React.FC = () => {
       { id: 'purchases', label: 'Pedidos de Compra', icon: ClipboardList },
     ] },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign, items: [
-      { id: 'financial', label: 'Gestão Financeira', icon: DollarSign },
+      { id: 'financial-entries', label: 'Entradas', icon: TrendingUp },
+      { id: 'financial-expenses', label: 'Saídas', icon: TrendingDown },
+      { id: 'cash-flow', label: 'Fluxo de Caixa', icon: DollarSign },
+      { id: 'reports', label: 'Relatórios', icon: BarChart3 },
+      { id: 'financial-settings', label: 'Configurações', icon: Settings },
     ] },
     { id: 'administracao', label: 'Administração', icon: Wrench, items: [
       { id: 'employees', label: 'Funcionários & Comissões', icon: UserCheck },
