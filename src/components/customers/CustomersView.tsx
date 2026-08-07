@@ -294,6 +294,7 @@ export const CustomersView: React.FC = () => {
 
       {/* Form Modal */}
       <CustomerFormModal
+        key={`${isModalOpen}-${editingCustomer?.id || 'novo'}`}
         isOpen={isModalOpen}
         customer={editingCustomer}
         onClose={() => setIsModalOpen(false)}

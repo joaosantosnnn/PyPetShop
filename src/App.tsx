@@ -17,6 +17,7 @@ import { KanbanBoard } from './components/operation/KanbanBoard';
 import { ComandasView } from './components/comandas/ComandasView';
 import { POSView } from './components/pos/POSView';
 import { InventoryView } from './components/inventory/InventoryView';
+import { SuppliersView } from './components/inventory/SuppliersView';
 import { StockManagementView } from './components/inventory/StockManagementView';
 import { FinancialView } from './components/financial/FinancialView';
 import { EmployeesView } from './components/employees/EmployeesView';
@@ -62,8 +63,9 @@ const MainLayout: React.FC = () => {
       case 'pos':
         return <POSView />;
       case 'products':
-      case 'suppliers':
         return <InventoryView />;
+      case 'suppliers':
+        return <SuppliersView />;
       case 'stock':
         return <StockManagementView />;
       case 'purchases':
@@ -109,7 +111,7 @@ const MainLayout: React.FC = () => {
         <Sidebar />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-6 custom-scrollbar">
           <ViewErrorBoundary viewKey={currentView} onBack={() => setCurrentView('dashboard')}>
-            {renderView()}
+            <React.Fragment key={currentView}>{renderView()}</React.Fragment>
           </ViewErrorBoundary>
         </main>
       </div>

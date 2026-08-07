@@ -115,6 +115,7 @@ export const ServicesView: React.FC = () => {
       </div>
 
       <ServiceFormModal
+        key={`${isModalOpen}-${editingService?.id || 'novo'}`}
         isOpen={isModalOpen}
         service={editingService}
         onClose={() => setIsModalOpen(false)}

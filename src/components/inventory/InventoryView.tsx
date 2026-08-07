@@ -250,6 +250,7 @@ export const InventoryView: React.FC = () => {
 
       {/* Form Modal */}
       <ProductFormModal
+        key={`${isModalOpen}-${editingProduct?.id || 'novo'}`}
         isOpen={isModalOpen}
         product={editingProduct}
         onClose={() => setIsModalOpen(false)}
