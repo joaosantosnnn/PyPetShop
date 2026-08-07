@@ -16,6 +16,11 @@ extraMetadata:
 
 asar: true
 
+protocols:
+  - name: PetGestor
+    schemes:
+      - petgestor
+
 win:
   icon: public/icons/petgestor.ico
   target:
