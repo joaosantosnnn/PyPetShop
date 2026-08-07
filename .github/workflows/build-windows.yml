@@ -1,0 +1,66 @@
+name: Gerar executáveis do Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VITE_SUPABASE_URL: https://yrzrpqhzssejffiarxxi.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7HUYTR2dOptPpvDN7lC4Mg_choUMdeg
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências do projeto
+        run: npm install
+
+      - name: Instalar empacotador desktop
+        run: npm install --no-save electron@42.3.0 electron-builder@26.15.7
+
+      - name: Validar TypeScript
+        run: npm run lint
+
+      - name: Compilar aplicação web
+        run: npm run build
+
+      - name: Ajustar versão pela tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $releaseVersion = "${{ github.ref_name }}".TrimStart('v')
+          npm version $releaseVersion --no-git-tag-version
+
+      - name: Gerar instalador e versão portátil para validação
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: npx electron-builder --win nsis portable --x64 --config electron-builder.yml
+
+      - name: Publicar atualização no GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npx electron-builder --win nsis portable --x64 --config electron-builder.yml --publish always
+
+      - name: Publicar executáveis para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: PetGestor-Windows
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 14
