@@ -16,8 +16,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_SUPABASE_URL: https://yrzrpqhzssejffiarxxi.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7HUYTR2dOptPpvDN7lC4Mg_choUMdeg
 
     steps:
       - name: Baixar o código
@@ -29,14 +29,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Verificar configuração do Supabase
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:VITE_SUPABASE_URL)) { throw 'Cadastre o secret VITE_SUPABASE_URL no GitHub.' }
-          if ([string]::IsNullOrWhiteSpace($env:VITE_SUPABASE_PUBLISHABLE_KEY)) { throw 'Cadastre o secret VITE_SUPABASE_PUBLISHABLE_KEY no GitHub.' }
-
       - name: Instalar dependências do projeto
-        run: npm ci
+        run: npm install
 
       - name: Instalar empacotador desktop
         run: npm install --no-save electron@42.3.0 electron-builder@26.15.7
