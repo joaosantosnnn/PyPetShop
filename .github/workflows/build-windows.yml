@@ -1,0 +1,59 @@
+name: Gerar executáveis do Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verificar configuração do Supabase
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:VITE_SUPABASE_URL)) { throw 'Cadastre o secret VITE_SUPABASE_URL no GitHub.' }
+          if ([string]::IsNullOrWhiteSpace($env:VITE_SUPABASE_PUBLISHABLE_KEY)) { throw 'Cadastre o secret VITE_SUPABASE_PUBLISHABLE_KEY no GitHub.' }
+
+      - name: Instalar dependências do projeto
+        run: npm ci
+
+      - name: Instalar empacotador desktop
+        run: npm install --no-save electron@42.3.0 electron-builder@26.15.7
+
+      - name: Validar TypeScript
+        run: npm run lint
+
+      - name: Compilar aplicação web
+        run: npm run build
+
+      - name: Gerar instalador e versão portátil
+        run: npx electron-builder --win nsis portable --x64 --config electron-builder.yml
+
+      - name: Publicar executáveis para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: PetGestor-Windows
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 14

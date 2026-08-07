@@ -1,0 +1,42 @@
+appId: com.petgestor.desktop
+productName: PetGestor
+copyright: Copyright © 2026 PetGestor
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - electron/**/*
+  - public/icons/petgestor.ico
+  - package.json
+
+extraMetadata:
+  main: electron/main.cjs
+
+asar: true
+
+win:
+  icon: public/icons/petgestor.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: PetGestor
+  artifactName: PetGestor-Setup-${version}.${ext}
+
+portable:
+  artifactName: PetGestor-Portable-${version}.${ext}
+
+publish: null
