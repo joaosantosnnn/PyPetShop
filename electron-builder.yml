@@ -44,4 +44,8 @@ nsis:
 portable:
   artifactName: PetGestor-Portable-${version}.${ext}
 
-publish: null
+publish:
+  provider: github
+  owner: joaosantosnnn
+  repo: PyPetShop
+  releaseType: release

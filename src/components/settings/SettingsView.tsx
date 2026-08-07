@@ -5,6 +5,7 @@ import type { Company } from '../../types';
 import { PortalRulesSettings } from './PortalRulesSettings';
 import { PaidCancellationPolicy } from './PaidCancellationPolicy';
 import { loadLauncherPreferences, saveLauncherPreferences, type LauncherPreferences } from '../../utils/launcherBranding';
+import { DesktopUpdateSettings } from './DesktopUpdateSettings';
 
 const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
 
@@ -29,6 +30,7 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-6xl p-4 md:p-6">
+      <DesktopUpdateSettings />
       <PortalRulesSettings />
       <PaidCancellationPolicy />
       <div className="mb-6">

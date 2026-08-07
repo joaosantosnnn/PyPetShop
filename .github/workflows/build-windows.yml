@@ -9,13 +9,14 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
+      GH_TOKEN: ${{ github.token }}
       VITE_SUPABASE_URL: https://yrzrpqhzssejffiarxxi.supabase.co
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7HUYTR2dOptPpvDN7lC4Mg_choUMdeg
 
@@ -41,8 +42,20 @@ jobs:
       - name: Compilar aplicação web
         run: npm run build
 
-      - name: Gerar instalador e versão portátil
+      - name: Ajustar versão pela tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $releaseVersion = "${{ github.ref_name }}".TrimStart('v')
+          npm version $releaseVersion --no-git-tag-version
+
+      - name: Gerar instalador e versão portátil para validação
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: npx electron-builder --win nsis portable --x64 --config electron-builder.yml
+
+      - name: Publicar atualização no GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npx electron-builder --win nsis portable --x64 --config electron-builder.yml --publish always
 
       - name: Publicar executáveis para download
         uses: actions/upload-artifact@v4

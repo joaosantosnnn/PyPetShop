@@ -39,6 +39,7 @@ import { PortalCreditsWidget } from './components/portal/PortalCreditsWidget';
 import { canAccessView } from './utils/permissions';
 import { ViewErrorBoundary } from './components/common/ViewErrorBoundary';
 import { PwaInstallPrompt } from './components/common/PwaInstallPrompt';
+import { DesktopUpdater } from './components/common/DesktopUpdater';
 
 const MainLayout: React.FC = () => {
   const { currentView } = usePetGestor();
@@ -120,6 +121,7 @@ const MainLayout: React.FC = () => {
       <ToastContainer />
       <ConfirmationModal />
       <PwaInstallPrompt />
+      <DesktopUpdater />
     </div>
   );
 };

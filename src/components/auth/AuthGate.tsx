@@ -8,14 +8,6 @@ import { loadLauncherPreferences, type LauncherPreferences } from '../../utils/l
 
 type Mode = 'login' | 'signup' | 'reset' | 'update-password';
 
-declare global {
-  interface Window {
-    petGestorDesktop?: {
-      onAuthCallback: (callback: (url: string) => void) => () => void;
-    };
-  }
-}
-
 const authErrorMessage = (message: string) => {
   const normalized = message.toLowerCase();
   if (normalized.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
