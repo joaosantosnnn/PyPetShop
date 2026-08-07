@@ -438,6 +438,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({ initialPet }
 
       {/* Appointment Form Modal */}
       <AppointmentFormModal
+        key={`${isModalOpen}-${initialPet?.id || 'novo'}`}
         isOpen={isModalOpen}
         initialPet={initialPet}
         onClose={() => setIsModalOpen(false)}
